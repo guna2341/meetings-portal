@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Calendar, Clock, Users, Plus, Search, Filter, MoreVertical, MapPin, User, ChevronRight, Building } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface Meeting {
   id: number;
@@ -32,6 +33,8 @@ interface MeetingCardProps {
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<'hosted' | 'invited'>('hosted');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const router = useRouter();
 
   // Sample data - all meetings are now in-person with locations
   const hostedMeetings: Meeting[] = [
@@ -115,6 +118,10 @@ export default function DashboardPage() {
     }
   ];
 
+  function handleRoute(id: string | number) {
+    router.push(`dashboard/view/${id}`);
+  }
+
   const upcomingMeetings: UpcomingMeeting[] = [
     { title: 'Team Standup', time: '9:00 AM', location: 'Meeting Room 3B', type: 'hosted' },
     { title: 'Design Review', time: '3:00 PM', location: 'Design Studio', type: 'invited' },
@@ -185,12 +192,12 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="flex gap-2 pt-4 border-t border-gray-100">
-        <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+      <div className="flex gap-2 pt-4 border-t border-gray-100" onClick={() => handleRoute(meeting.id)}>
+        <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium cursor-pointer">
           View Details
         </button>
         {isHosted && (
-          <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+          <button className="cursor-pointer px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
             Edit
           </button>
         )}
@@ -248,8 +255,8 @@ export default function DashboardPage() {
           </h2>
           <div className="space-y-3">
             {upcomingMeetings.map((meeting, idx) => (
-              <div key={idx} className="flex items-center justify-between bg-white/10 backdrop-blur rounded-lg p-4">
-                <div className="flex items-center gap-4">
+              <div key={idx} className="flex items-center justify-between bg-white/10 backdrop-blur rounded-lg p-4 cursor-pointer" onClick={() => handleRoute(idx)}>
+                <div className="flex items-center gap-4"> 
                   <div className="bg-white/20 px-3 py-1 rounded-lg">
                     <span className="font-semibold">{meeting.time}</span>
                   </div>
@@ -318,7 +325,7 @@ export default function DashboardPage() {
           {activeTab === 'hosted' ? (
             filteredHostedMeetings.length > 0 ? (
               filteredHostedMeetings.map(meeting => (
-                <MeetingCard key={meeting.id} meeting={meeting} isHosted={true} />
+                <MeetingCard key={meeting.id} meeting={meeting} isHosted={true}  />
               ))
             ) : (
               <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
