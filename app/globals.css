@@ -21,3 +21,17 @@
   }
 }
 
+.custom-scroll {
+  overflow-y: auto;
+}
+
+.custom-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: #3B82F6;
+  border-radius: 6px;
+}
+
+
