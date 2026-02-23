@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
@@ -26,35 +27,35 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
       label: 'Dashboard', 
       icon: LayoutDashboard,
       description: 'Overview of meetings',
-      route: '/admin/dashboard'
+      route: '/dashboard'
     },
     { 
       id: 'create', 
       label: 'Create Meeting', 
       icon: Plus,
       description: 'Schedule new meeting',
-      route: '/admin/create-meet'
+      route: '/create-meet'
     },
     { 
       id: 'history', 
       label: 'Meeting History', 
       icon: History,
       description: 'Past meetings',
-      route: '/admin/history'
+      route: '/history'
     },
     { 
       id: 'tasks-assigned', 
       label: 'My tasks',
       icon: CheckSquare,
       description: 'Tasks Assigned to Me', 
-      route: '/admin/my-tasks'
+      route: '/my-tasks'
     },
     { 
       id: 'tasks-i-assigned', 
       label: 'Assigned tasks', 
       icon: Users,
       description: 'Tasks for others',
-      route: '/admin/assigned-tasks'
+      route: '/assigned-tasks'
     },
   ];
 

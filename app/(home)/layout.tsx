@@ -1,5 +1,5 @@
-import Header from '@/src/components/admin/sidebar/header'
-import Sidebar from '@/src/components/admin/sidebar/sidebar'
+import Header from '@/src/components/header/header'
+import Sidebar from '@/src/components/sidebar/sidebar'
 import React from 'react'
 
 export default function Layout ({children}: {children: React.ReactNode}){
@@ -17,4 +17,3 @@ export default function Layout ({children}: {children: React.ReactNode}){
     </div>
   )
 }
-

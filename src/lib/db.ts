@@ -1,4 +1,3 @@
-"use server"
 
 import mongoose, { Mongoose } from "mongoose";
 
@@ -6,7 +5,7 @@ const MONGOOSE_URI: string | undefined = process.env.MONGOOSE_URI;
 
 declare global {
     var mongoose: Mongoose | undefined;
-  }
+}
   
 (globalThis.mongoose as Mongoose | null) = null;
 
@@ -19,6 +18,8 @@ async function connectDB() {
 
         globalThis.mongoose = await mongoose.connect(MONGOOSE_URI);
 
+        console.log("Connected to MongoDB");
+        
         return globalThis.mongoose;
     }
     catch (err: unknown) {

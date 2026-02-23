@@ -118,8 +118,8 @@ export default function DashboardPage() {
     }
   ];
 
-  function handleRoute(id: string | number) {
-    router.push(`dashboard/view/${id}`);
+  function handleRoute(id: string | number, route: string) {
+    router.push(`dashboard/${route}/${id}`);
   }
 
   const upcomingMeetings: UpcomingMeeting[] = [
@@ -192,12 +192,12 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="flex gap-2 pt-4 border-t border-gray-100" onClick={() => handleRoute(meeting.id)}>
-        <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium cursor-pointer">
+      <div className="flex gap-2 pt-4 border-t border-gray-100">
+        <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium cursor-pointer" onClick={() => handleRoute(meeting.id, "view")}>
           View Details
         </button>
         {isHosted && (
-          <button className="cursor-pointer px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+          <button className="cursor-pointer px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium" onClick={() => handleRoute(meeting.id, "edit")}>
             Edit
           </button>
         )}
@@ -255,7 +255,7 @@ export default function DashboardPage() {
           </h2>
           <div className="space-y-3">
             {upcomingMeetings.map((meeting, idx) => (
-              <div key={idx} className="flex items-center justify-between bg-white/10 backdrop-blur rounded-lg p-4 cursor-pointer" onClick={() => handleRoute(idx)}>
+              <div key={idx} className="flex items-center justify-between bg-white/10 backdrop-blur rounded-lg p-4 cursor-pointer" onClick={() => handleRoute(idx, "view")}>
                 <div className="flex items-center gap-4"> 
                   <div className="bg-white/20 px-3 py-1 rounded-lg">
                     <span className="font-semibold">{meeting.time}</span>
