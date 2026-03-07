@@ -35,7 +35,9 @@ interface Pagination {
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 // TODO: replace with your real auth/session user id
-const CURRENT_USER_ID = 'YOUR_USER_ID';
+let CURRENT_USER_ID: string;
+if (typeof window != "undefined")
+CURRENT_USER_ID = JSON.parse(localStorage.getItem("data") || "")?.id;
 
 const statusConfig = {
   completed:   { label: 'Completed',   color: 'bg-green-100 text-green-700', icon: CheckCircle, iconColor: 'text-green-500' },
@@ -89,14 +91,13 @@ export default function MyTasksPage() {
     setError(null);
     try {
       const q = new URLSearchParams({
-        userId: CURRENT_USER_ID,
         page:   String(page),
         limit:  '50', // load all for client-side grouping/search
       });
       if (statusFilter   !== 'all') q.set('status',   statusFilter);
       if (priorityFilter !== 'all') q.set('priority', priorityFilter);
 
-      const res  = await fetch(`/api/tasks?${q}`);
+      const res  = await fetch(`/api/tasks/${CURRENT_USER_ID}`);
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
       const json = await res.json();
       if (!json.success) throw new Error(json.message ?? 'API error');

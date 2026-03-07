@@ -27,7 +27,8 @@ interface Attendee {
 interface Task {
   id: number;
   title: string;
-  assignedTo: string;
+  assignedTo: string;       // stores user _id
+  assignedToName: string;   // stores display name (UI only, not sent to API)
   dueDate: string;
   priority: 'high' | 'medium' | 'low';
 }
@@ -96,11 +97,8 @@ function useAllUsers() {
         const res  = await fetch('/api/users?limit=50');
         const json = await res.json();
         if (json.success) setUsers(json.data);
-      } catch {
-        // silently ignore
-      } finally {
-        setLoading(false);
-      }
+      } catch { /* silently ignore */ }
+      finally { setLoading(false); }
     };
     run();
   }, []);
@@ -124,11 +122,8 @@ function useUsers(search: string) {
         const res  = await fetch(`/api/users?${q}`);
         const json = await res.json();
         if (!cancelled && json.success) setUsers(json.data);
-      } catch {
-        // silently ignore
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+      } catch { /* silently ignore */ }
+      finally { if (!cancelled) setLoading(false); }
     };
     const timer = setTimeout(run, 300);
     return () => { cancelled = true; clearTimeout(timer); };
@@ -173,12 +168,8 @@ function OrganizerSelect({
 
   const isSelected = !!value.name && !!value.email;
 
-  const nameFiltered = users.filter((u) =>
-    u.name.toLowerCase().includes(query.toLowerCase())
-  );
-  const emailFiltered = users.filter((u) =>
-    u.email.toLowerCase().includes(value.email.toLowerCase())
-  );
+  const nameFiltered  = users.filter((u) => u.name.toLowerCase().includes(query.toLowerCase()));
+  const emailFiltered = users.filter((u) => u.email.toLowerCase().includes(value.email.toLowerCase()));
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -189,10 +180,7 @@ function OrganizerSelect({
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const handleClear = () => {
-    setQuery('');
-    onChange({ name: '', email: '' });
-  };
+  const handleClear = () => { setQuery(''); onChange({ name: '', email: '' }); };
 
   const UserOption = ({ user, onPick }: { user: ApiUser; onPick: () => void }) => (
     <button
@@ -212,8 +200,6 @@ function OrganizerSelect({
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-
-      {/* ── Name field ── */}
       <div ref={nameRef} className="relative">
         <label className={labelCls}>Name</label>
         <div className="relative">
@@ -221,22 +207,12 @@ function OrganizerSelect({
             className={`${inputCls} pr-8 ${isSelected ? 'bg-gray-50 text-gray-500' : ''}`}
             value={query}
             readOnly={isSelected}
-            onChange={(e) => {
-              if (isSelected) return;
-              setQuery(e.target.value);
-              onChange({ ...value, name: e.target.value });
-              setNameOpen(true);
-            }}
+            onChange={(e) => { if (isSelected) return; setQuery(e.target.value); onChange({ ...value, name: e.target.value }); setNameOpen(true); }}
             onFocus={() => { if (!isSelected) setNameOpen(true); }}
             placeholder="Your name"
           />
-          {/* Clear button when selected, spinner when loading */}
           {isSelected ? (
-            <button
-              type="button"
-              onClick={handleClear}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
-            >
+            <button type="button" onClick={handleClear} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors">
               <X size={13} />
             </button>
           ) : loading ? (
@@ -248,14 +224,7 @@ function OrganizerSelect({
             <ul className="max-h-48 overflow-y-auto divide-y divide-gray-50">
               {nameFiltered.map((user) => (
                 <li key={user._id}>
-                  <UserOption
-                    user={user}
-                    onPick={() => {
-                      setQuery(user.name);
-                      onChange({ name: user.name, email: user.email });
-                      setNameOpen(false);
-                    }}
-                  />
+                  <UserOption user={user} onPick={() => { setQuery(user.name); onChange({ name: user.name, email: user.email }); setNameOpen(false); }} />
                 </li>
               ))}
             </ul>
@@ -263,7 +232,6 @@ function OrganizerSelect({
         )}
       </div>
 
-      {/* ── Email field ── */}
       <div ref={emailRef} className="relative">
         <label className={labelCls}>Email</label>
         <div className="relative">
@@ -272,20 +240,12 @@ function OrganizerSelect({
             className={`${inputCls} pr-8 ${isSelected ? 'bg-gray-50 text-gray-500 cursor-default' : ''}`}
             value={value.email}
             readOnly={isSelected}
-            onChange={(e) => {
-              if (isSelected) return;
-              onChange({ ...value, email: e.target.value });
-              setEmailOpen(true);
-            }}
+            onChange={(e) => { if (isSelected) return; onChange({ ...value, email: e.target.value }); setEmailOpen(true); }}
             onFocus={() => { if (!isSelected) setEmailOpen(true); }}
             placeholder={isSelected ? '' : 'Auto-filled when you pick a user'}
           />
           {isSelected ? (
-            <button
-              type="button"
-              onClick={handleClear}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
-            >
+            <button type="button" onClick={handleClear} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors">
               <X size={13} />
             </button>
           ) : loading ? (
@@ -293,25 +253,17 @@ function OrganizerSelect({
           ) : null}
         </div>
         {emailOpen && !isSelected && emailFiltered.length > 0 && (
-          <div className="absolute z-100 mt-1 w-full bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+          <div className="absolute z-50 mt-1 w-full bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
             <ul className="max-h-48 overflow-y-auto divide-y divide-gray-50">
               {emailFiltered.map((user) => (
                 <li key={user._id}>
-                  <UserOption
-                    user={user}
-                    onPick={() => {
-                      setQuery(user.name);
-                      onChange({ name: user.name, email: user.email });
-                      setEmailOpen(false);
-                    }}
-                  />
+                  <UserOption user={user} onPick={() => { setQuery(user.name); onChange({ name: user.name, email: user.email }); setEmailOpen(false); }} />
                 </li>
               ))}
             </ul>
           </div>
         )}
       </div>
-
     </div>
   );
 }
@@ -351,9 +303,7 @@ function UserSearchDropdown({
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
         />
-        {loading && (
-          <Loader2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />
-        )}
+        {loading && <Loader2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />}
       </div>
       {open && (
         <div className="absolute z-50 mt-1 w-full bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
@@ -367,12 +317,7 @@ function UserSearchDropdown({
                 <li key={user._id}>
                   <button
                     type="button"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      onSelect(user);
-                      setQuery('');
-                      setOpen(false);
-                    }}
+                    onMouseDown={(e) => { e.preventDefault(); onSelect(user); setQuery(''); setOpen(false); }}
                     className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors text-left"
                   >
                     <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-700 shrink-0">
@@ -394,17 +339,27 @@ function UserSearchDropdown({
 }
 
 // ─── UserCombobox ─────────────────────────────────────────────────────────
+// Now stores the user's _id in value, but displays their name in the input.
 
 function UserCombobox({
-  value,
-  onChange,
+  value,          // the user _id currently selected
+  displayName,    // the human-readable name to show in the input
+  onChange,       // called with (userId, userName) when a user is picked
+  onClear,        // called when the field is cleared
 }: {
   value: string;
-  onChange: (val: string) => void;
+  displayName: string;
+  onChange: (userId: string, userName: string) => void;
+  onClear: () => void;
 }) {
+  const [query, setQuery]  = useState(displayName);
   const [open, setOpen]    = useState(false);
-  const { users, loading } = useUsers(value);
+  const { users, loading } = useUsers(query);
   const ref                = useRef<HTMLDivElement>(null);
+  const isSelected         = !!value;
+
+  // Keep input in sync if parent resets
+  useEffect(() => { setQuery(displayName); }, [displayName]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -416,17 +371,29 @@ function UserCombobox({
 
   return (
     <div ref={ref} className="relative">
-      <input
-        className={inputCls}
-        value={value}
-        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
-        onFocus={() => setOpen(true)}
-        placeholder="Name or email"
-      />
-      {loading && (
-        <Loader2 size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />
-      )}
-      {open && users.length > 0 && (
+      <div className="relative">
+        <input
+          className={`${inputCls} pr-7 ${isSelected ? 'bg-gray-50 text-gray-600' : ''}`}
+          value={query}
+          readOnly={isSelected}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => { if (!isSelected) setOpen(true); }}
+          placeholder="Search user…"
+        />
+        {isSelected ? (
+          <button
+            type="button"
+            onClick={() => { onClear(); setQuery(''); }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors"
+          >
+            <X size={12} />
+          </button>
+        ) : loading ? (
+          <Loader2 size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />
+        ) : null}
+      </div>
+
+      {open && !isSelected && users.length > 0 && (
         <div className="absolute z-50 mt-1 w-full bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
           <ul className="max-h-40 overflow-y-auto divide-y divide-gray-50">
             {users.map((user) => (
@@ -435,7 +402,8 @@ function UserCombobox({
                   type="button"
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    onChange(user.name);
+                    onChange(user._id, user.name);   // ← pass ID, not name
+                    setQuery(user.name);
                     setOpen(false);
                   }}
                   className="w-full flex items-center gap-2 px-3 py-2 hover:bg-blue-50 transition-colors text-left"
@@ -468,6 +436,19 @@ export default function CreateMeetingPage() {
   const [submitError, setSubmitError]   = useState<string | null>(null);
   const [createdId, setCreatedId]       = useState<string | null>(null);
 
+  // ── Lock organizer to the logged-in user from localStorage ────────────
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('data');
+      if (!raw) return;
+      const user: { id: string; name: string; email: string } = JSON.parse(raw);
+      if (user?.name && user?.email) {
+        setForm((f) => ({ ...f, organizer: { name: user.name, email: user.email } }));
+      }
+    } catch {
+    }
+  }, [currentStep]);
+
   // ── Field helpers ──────────────────────────────────────────────────────
 
   const updateField = <K extends keyof MeetingForm>(key: K, value: MeetingForm[K]) =>
@@ -490,10 +471,33 @@ export default function CreateMeetingPage() {
   const addTask = () =>
     setForm((f) => ({
       ...f,
-      tasks: [...f.tasks, { id: Date.now(), title: '', assignedTo: '', dueDate: '', priority: 'medium' }],
+      tasks: [
+        ...f.tasks,
+        { id: Date.now(), title: '', assignedTo: '', assignedToName: '', dueDate: '', priority: 'medium' },
+      ],
     }));
-  const updateTask = (id: number, field: keyof Task, val: string) =>
+
+  // Update a task's plain fields
+  const updateTask = (id: number, field: keyof Omit<Task, 'id' | 'assignedTo' | 'assignedToName'>, val: string) =>
     setForm((f) => ({ ...f, tasks: f.tasks.map((t) => t.id === id ? { ...t, [field]: val } : t) }));
+
+  // Update assignedTo (ID) + assignedToName together
+  const updateTaskAssignee = (id: number, userId: string, userName: string) =>
+    setForm((f) => ({
+      ...f,
+      tasks: f.tasks.map((t) =>
+        t.id === id ? { ...t, assignedTo: userId, assignedToName: userName } : t
+      ),
+    }));
+
+  const clearTaskAssignee = (id: number) =>
+    setForm((f) => ({
+      ...f,
+      tasks: f.tasks.map((t) =>
+        t.id === id ? { ...t, assignedTo: '', assignedToName: '' } : t
+      ),
+    }));
+
   const removeTask = (id: number) =>
     setForm((f) => ({ ...f, tasks: f.tasks.filter((t) => t.id !== id) }));
 
@@ -523,10 +527,14 @@ export default function CreateMeetingPage() {
         organizer:   form.organizer,
         attendees:   form.attendees.map(({ name, email }) => ({ name, email, status: 'pending' as const })),
         agenda:      form.agenda.filter((a) => a.trim() !== ''),
-        tasks:       form.tasks
-          .filter((t) => t.title.trim() !== '')
+        tasks: form.tasks
+          .filter((t) => t.title.trim() !== '' && t.assignedTo !== '')
           .map(({ title, assignedTo, dueDate, priority }) => ({
-            title, assignedTo, dueDate, priority, status: 'pending' as const,
+            title,
+            assignedTo,   // ← this is now a user _id string
+            dueDate,
+            priority,
+            status: 'pending' as const,
           })),
         notes: form.notes.trim()
           ? [{ author: form.organizer.name || 'Organizer', content: form.notes }]
@@ -760,11 +768,23 @@ export default function CreateMeetingPage() {
               </div>
             </SectionCard>
 
-            <SectionCard title="Organizer" subtitle="Who is organizing this meeting?">
-              <OrganizerSelect
-                value={form.organizer}
-                onChange={(v) => updateField('organizer', v)}
-              />
+            <SectionCard title="Organizer" subtitle="Automatically set to you as the meeting creator">
+              <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+                <div className="w-9 h-9 rounded-full bg-blue-200 flex items-center justify-center text-sm font-bold text-blue-700 shrink-0">
+                  {form.organizer.name
+                    ? form.organizer.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+                    : <User size={15} />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">
+                    {form.organizer.name || "Loading…"}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">{form.organizer.email}</p>
+                </div>
+                <span className="text-xs font-medium text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full shrink-0">
+                  Organizer
+                </span>
+              </div>
             </SectionCard>
 
             {!stepValid(1) && (
@@ -829,10 +849,7 @@ export default function CreateMeetingPage() {
               ) : (
                 <div className="flex flex-col gap-2">
                   {form.attendees.map((attendee) => (
-                    <div
-                      key={attendee.id}
-                      className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3"
-                    >
+                    <div key={attendee.id} className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
                       <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-700 shrink-0">
                         {attendee.name
                           ? attendee.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
@@ -901,9 +918,12 @@ export default function CreateMeetingPage() {
                         <div className="grid grid-cols-3 gap-2">
                           <div>
                             <label className={labelCls}>Assigned To</label>
+                            {/* Now stores _id, shows name */}
                             <UserCombobox
                               value={task.assignedTo}
-                              onChange={(val) => updateTask(task.id, 'assignedTo', val)}
+                              displayName={task.assignedToName}
+                              onChange={(userId, userName) => updateTaskAssignee(task.id, userId, userName)}
+                              onClear={() => clearTaskAssignee(task.id)}
                             />
                           </div>
                           <div>
@@ -932,6 +952,11 @@ export default function CreateMeetingPage() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Show selected user's ID in a subtle hint for debugging (optional — remove in prod) */}
+                      {task.assignedTo && (
+                        <p className="text-xs text-gray-300 mt-1.5 font-mono truncate">id: {task.assignedTo}</p>
+                      )}
                     </div>
                   ))}
                   <button

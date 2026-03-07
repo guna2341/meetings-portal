@@ -58,8 +58,12 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
     }
   ];
 
-  const unreadCount = notifications.filter(n => n.unread).length;
+  let user = null;
 
+  if (typeof window !== "undefined") {
+    const data = localStorage.getItem("data");
+    user = data ? JSON.parse(data) : null;
+  }
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
       <div className="px-4 sm:px-6 lg:px-8">
@@ -99,8 +103,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
 
           {/* Right Section - Actions & User Menu */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Current Date/Time */}
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg">
+            {/* <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg">
               <Calendar className="w-4 h-4 text-gray-500" />
               <span className="text-sm text-gray-700 font-medium">
                 {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -110,7 +113,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
               <span className="text-sm text-gray-700 font-medium">
                 {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
               </span>
-            </div>
+            </div> */}
 
             {/* Notifications */}
             {/* <div className="relative">
@@ -187,7 +190,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
                 className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                  <span className="text-white font-semibold text-sm">JD</span>
+                  <span className="text-white font-semibold text-sm">{user?.name?.[0] || "U"}</span>
                 </div>
                 <ChevronDown className="w-4 h-4 text-gray-500 hidden sm:block" />
               </button>
@@ -204,11 +207,11 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
                     <div className="p-4 border-b border-gray-200">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                          <span className="text-white font-semibold">JD</span>
+                          <span className="text-white font-semibold">{user?.name?.[0] || "U"}</span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">John Doe</p>
-                          <p className="text-xs text-gray-500 truncate">john.doe@company.com</p>
+                          <p className="text-sm font-semibold text-gray-900 truncate">{user?.name || "User"}</p>
+                          <p className="text-xs text-gray-500 truncate">{user?.email || "user@gmail.com" }</p>
                         </div>
                       </div>
                     </div>

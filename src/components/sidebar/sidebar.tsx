@@ -67,6 +67,11 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
     }
   };
 
+  function handleLogout() {
+    router.replace("/login");
+    localStorage.clear();
+  }
+
   return (
     <>
       {/* Overlay for mobile - Click to close sidebar */}
@@ -155,7 +160,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
             <span className="text-sm font-medium">Settings</span>
           </button>
           
-          <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors">
+          <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" onClick={handleLogout}>
             <LogOut className="w-5 h-5" />
             <span className="text-sm font-medium">Logout</span>
           </button>

@@ -3,6 +3,7 @@ import mongoose, { Document, Model, Schema } from 'mongoose';
 // ─── Sub-document interfaces ───────────────────────────────────────────────
 
 export interface IAttendee {
+  id?: string;
   name: string;
   email: string;
   status: 'accepted' | 'declined' | 'pending';
@@ -10,7 +11,7 @@ export interface IAttendee {
 
 export interface ITask {
   title: string;
-  assignedTo: string;
+  assignedTo: mongoose.Types.ObjectId;   // ← was string, now ObjectId
   dueDate: Date;
   status: 'completed' | 'in-progress' | 'pending';
   priority: 'high' | 'medium' | 'low';
@@ -23,6 +24,7 @@ export interface INote {
 }
 
 export interface IOrganizer {
+  userId: string;                        // stores the JWT user id
   name: string;
   email: string;
 }
@@ -51,6 +53,10 @@ export interface IMeeting extends Document {
 
 const AttendeeSchema = new Schema<IAttendee>(
   {
+    userId: {
+      type: String,
+      default: '',
+    },
     name: {
       type: String,
       required: [true, 'Attendee name is required'],
@@ -83,9 +89,9 @@ const TaskSchema = new Schema<ITask>(
       trim: true,
     },
     assignedTo: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,   // ← was String
+      ref: 'User',
       required: [true, 'Task must be assigned to someone'],
-      trim: true,
     },
     dueDate: {
       type: Date,
@@ -131,19 +137,20 @@ const NoteSchema = new Schema<INote>(
   { _id: true }
 );
 
-const OrganizerSchema = new Schema<IOrganizer>(
+const OrganizerSchema = new Schema(
   {
+    userId: {
+      type: String,
+      required: true,
+    },
     name: {
       type: String,
-      required: [true, 'Organizer name is required'],
+      default: "",     // ✅ NOT required
       trim: true,
     },
     email: {
       type: String,
-      required: [true, 'Organizer email is required'],
-      trim: true,
-      lowercase: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email address'],
+      required: true,
     },
   },
   { _id: false }
@@ -217,7 +224,7 @@ const MeetingSchema = new Schema<IMeeting>(
     },
   },
   {
-    timestamps: true, // auto-manages createdAt & updatedAt
+    timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
   }
@@ -227,9 +234,11 @@ const MeetingSchema = new Schema<IMeeting>(
 
 MeetingSchema.index({ date: 1 });
 MeetingSchema.index({ status: 1 });
+MeetingSchema.index({ 'organizer.userId': 1 });          // ← added for GET filter
 MeetingSchema.index({ 'organizer.email': 1 });
 MeetingSchema.index({ 'attendees.email': 1 });
-MeetingSchema.index({ title: 'text', description: 'text' }); // full-text search
+MeetingSchema.index({ 'tasks.assignedTo': 1 });      // ← added for task queries
+MeetingSchema.index({ title: 'text', description: 'text' });
 
 // ─── Virtuals ─────────────────────────────────────────────────────────────
 
