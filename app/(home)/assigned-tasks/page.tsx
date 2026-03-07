@@ -86,7 +86,7 @@ export default function AssignedByMePage() {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.set('status', statusFilter);
 
-      const res  = await fetch(`/api/tasks/assigned-by-me?${params.toString()}`);
+      const res  = await fetch(`/api/assigned-tasks?${params.toString()}`);
       const data = await res.json();
 
       if (!res.ok || !data.success) throw new Error(data.message || 'Failed to fetch tasks');

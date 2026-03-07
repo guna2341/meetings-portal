@@ -63,27 +63,28 @@ export async function PATCH(
     const userObjectId = new mongoose.Types.ObjectId(user.id);
     const { status }   = parsed.data;
 
-    // Find the meeting and verify the task belongs to this user
-    const meeting = await Meeting.findOne({
+    // Find the meeting and verify the requester is either the assignee or the organizer
+    const query = {
       _id:               new mongoose.Types.ObjectId(id),
       "tasks._id":       new mongoose.Types.ObjectId(taskId),
-      "tasks.assignedTo": userObjectId,  // only the assignee can update their own task
-    });
+      $or: [
+        { "tasks.assignedTo": userObjectId },
+        { "organizer.userId": user.id }
+      ]
+    };
+
+    const meeting = await Meeting.findOne(query);
 
     if (!meeting) {
       return NextResponse.json(
-        { success: false, message: "Task not found or you are not the assignee" },
+        { success: false, message: "Task not found or you don't have permission to update it" },
         { status: 404 }
       );
     }
 
     // Update the specific task's status using positional $ operator
     const updated = await Meeting.findOneAndUpdate(
-      {
-        _id:                new mongoose.Types.ObjectId(id),
-        "tasks._id":        new mongoose.Types.ObjectId(taskId),
-        "tasks.assignedTo": userObjectId,
-      },
+      query,
       {
         $set: { "tasks.$.status": status },
       },

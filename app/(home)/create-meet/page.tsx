@@ -56,16 +56,16 @@ const inputCls =
 const labelCls = 'block text-xs font-medium text-gray-500 mb-1';
 
 const steps = [
-  { id: 1, label: 'Details',       icon: FileText   },
-  { id: 2, label: 'Agenda',        icon: ListTodo   },
-  { id: 3, label: 'Attendees',     icon: Users      },
+  { id: 1, label: 'Details', icon: FileText },
+  { id: 2, label: 'Agenda', icon: ListTodo },
+  { id: 3, label: 'Attendees', icon: Users },
   { id: 4, label: 'Tasks & Notes', icon: StickyNote },
 ];
 
 const priorityConfig = {
-  high:   'bg-red-50 text-red-700',
+  high: 'bg-red-50 text-red-700',
   medium: 'bg-yellow-50 text-yellow-700',
-  low:    'bg-green-50 text-green-700',
+  low: 'bg-green-50 text-green-700',
 };
 
 const defaultForm: MeetingForm = {
@@ -87,14 +87,14 @@ const defaultForm: MeetingForm = {
 // ─── useAllUsers ──────────────────────────────────────────────────────────
 
 function useAllUsers() {
-  const [users, setUsers]     = useState<ApiUser[]>([]);
+  const [users, setUsers] = useState<ApiUser[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const run = async () => {
       setLoading(true);
       try {
-        const res  = await fetch('/api/users?limit=50');
+        const res = await fetch('/api/users?limit=50');
         const json = await res.json();
         if (json.success) setUsers(json.data);
       } catch { /* silently ignore */ }
@@ -109,7 +109,7 @@ function useAllUsers() {
 // ─── useUsers — debounced ─────────────────────────────────────────────────
 
 function useUsers(search: string) {
-  const [users, setUsers]     = useState<ApiUser[]>([]);
+  const [users, setUsers] = useState<ApiUser[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -119,7 +119,7 @@ function useUsers(search: string) {
       try {
         const q = new URLSearchParams({ limit: '20' });
         if (search.trim()) q.set('search', search.trim());
-        const res  = await fetch(`/api/users?${q}`);
+        const res = await fetch(`/api/users?${q}`);
         const json = await res.json();
         if (!cancelled && json.success) setUsers(json.data);
       } catch { /* silently ignore */ }
@@ -159,21 +159,21 @@ function OrganizerSelect({
   value: MeetingForm['organizer'];
   onChange: (v: MeetingForm['organizer']) => void;
 }) {
-  const [query, setQuery]         = useState(value.name);
-  const [nameOpen, setNameOpen]   = useState(false);
+  const [query, setQuery] = useState(value.name);
+  const [nameOpen, setNameOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
-  const { users, loading }        = useAllUsers();
-  const nameRef                   = useRef<HTMLDivElement>(null);
-  const emailRef                  = useRef<HTMLDivElement>(null);
+  const { users, loading } = useAllUsers();
+  const nameRef = useRef<HTMLDivElement>(null);
+  const emailRef = useRef<HTMLDivElement>(null);
 
   const isSelected = !!value.name && !!value.email;
 
-  const nameFiltered  = users.filter((u) => u.name.toLowerCase().includes(query.toLowerCase()));
+  const nameFiltered = users.filter((u) => u.name.toLowerCase().includes(query.toLowerCase()));
   const emailFiltered = users.filter((u) => u.email.toLowerCase().includes(value.email.toLowerCase()));
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (nameRef.current  && !nameRef.current.contains(e.target as Node))  setNameOpen(false);
+      if (nameRef.current && !nameRef.current.contains(e.target as Node)) setNameOpen(false);
       if (emailRef.current && !emailRef.current.contains(e.target as Node)) setEmailOpen(false);
     };
     document.addEventListener('mousedown', handler);
@@ -277,10 +277,10 @@ function UserSearchDropdown({
   onSelect: (user: ApiUser) => void;
   excluded: string[];
 }) {
-  const [query, setQuery]  = useState('');
-  const [open, setOpen]    = useState(false);
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
   const { users, loading } = useUsers(query);
-  const ref                = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -352,11 +352,11 @@ function UserCombobox({
   onChange: (userId: string, userName: string) => void;
   onClear: () => void;
 }) {
-  const [query, setQuery]  = useState(displayName);
-  const [open, setOpen]    = useState(false);
+  const [query, setQuery] = useState(displayName);
+  const [open, setOpen] = useState(false);
   const { users, loading } = useUsers(query);
-  const ref                = useRef<HTMLDivElement>(null);
-  const isSelected         = !!value;
+  const ref = useRef<HTMLDivElement>(null);
+  const isSelected = !!value;
 
   // Keep input in sync if parent resets
   useEffect(() => { setQuery(displayName); }, [displayName]);
@@ -430,11 +430,11 @@ function UserCombobox({
 export default function CreateMeetingPage() {
   const router = useRouter();
 
-  const [currentStep, setCurrentStep]   = useState(1);
-  const [form, setForm]                 = useState<MeetingForm>(defaultForm);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [form, setForm] = useState<MeetingForm>(defaultForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError]   = useState<string | null>(null);
-  const [createdId, setCreatedId]       = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [createdId, setCreatedId] = useState<string | null>(null);
 
   // ── Lock organizer to the logged-in user from localStorage ────────────
   useEffect(() => {
@@ -456,7 +456,7 @@ export default function CreateMeetingPage() {
 
   const updateAgendaItem = (i: number, val: string) =>
     setForm((f) => { const a = [...f.agenda]; a[i] = val; return { ...f, agenda: a }; });
-  const addAgendaItem    = () => setForm((f) => ({ ...f, agenda: [...f.agenda, ''] }));
+  const addAgendaItem = () => setForm((f) => ({ ...f, agenda: [...f.agenda, ''] }));
   const removeAgendaItem = (i: number) =>
     setForm((f) => ({ ...f, agenda: f.agenda.filter((_, idx) => idx !== i) }));
 
@@ -516,17 +516,17 @@ export default function CreateMeetingPage() {
     setSubmitError(null);
     try {
       const result = await createMeeting({
-        title:       form.title,
+        title: form.title,
         description: form.description || undefined,
-        date:        form.date,
-        time:        form.time,
-        duration:    form.duration,
-        location:    form.location  || undefined,
-        building:    form.building  || undefined,
-        status:      form.status,
-        organizer:   form.organizer,
-        attendees:   form.attendees.map(({ name, email }) => ({ name, email, status: 'pending' as const })),
-        agenda:      form.agenda.filter((a) => a.trim() !== ''),
+        date: form.date,
+        time: form.time,
+        duration: form.duration,
+        location: form.location || undefined,
+        building: form.building || undefined,
+        status: form.status,
+        organizer: form.organizer,
+        attendees: form.attendees.map(({ name, email }) => ({ name, email, status: 'pending' as const })),
+        agenda: form.agenda.filter((a) => a.trim() !== ''),
         tasks: form.tasks
           .filter((t) => t.title.trim() !== '' && t.assignedTo !== '')
           .map(({ title, assignedTo, dueDate, priority }) => ({
@@ -542,7 +542,7 @@ export default function CreateMeetingPage() {
       });
 
       if (result.success) {
-        setCreatedId((result.data as { _id: string })._id);
+        setCreatedId((result.data as { _id: any })._id);
       } else {
         setSubmitError(result.message ?? 'Something went wrong. Please try again.');
       }
@@ -658,25 +658,23 @@ export default function CreateMeetingPage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-6">
           <div className="flex items-center">
             {steps.map((step, i) => {
-              const Icon     = step.icon;
+              const Icon = step.icon;
               const isActive = currentStep === step.id;
-              const isDone   = currentStep > step.id;
+              const isDone = currentStep > step.id;
               return (
                 <div key={step.id} className="flex items-center flex-1">
                   <button
                     onClick={() => isDone && setCurrentStep(step.id)}
                     className={`flex items-center gap-2 ${isDone ? 'cursor-pointer' : 'cursor-default'}`}
                   >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all ${
-                      isDone   ? 'bg-green-100 text-green-600' :
-                      isActive ? 'bg-blue-600 text-white shadow-md' :
-                                 'bg-gray-100 text-gray-400'
-                    }`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all ${isDone ? 'bg-green-100 text-green-600' :
+                        isActive ? 'bg-blue-600 text-white shadow-md' :
+                          'bg-gray-100 text-gray-400'
+                      }`}>
                       {isDone ? <CheckCircle size={16} /> : <Icon size={14} />}
                     </div>
-                    <span className={`text-sm font-medium hidden sm:block transition-colors ${
-                      isActive ? 'text-blue-600' : isDone ? 'text-green-600' : 'text-gray-400'
-                    }`}>
+                    <span className={`text-sm font-medium hidden sm:block transition-colors ${isActive ? 'text-blue-600' : isDone ? 'text-green-600' : 'text-gray-400'
+                      }`}>
                       {step.label}
                     </span>
                   </button>
@@ -721,12 +719,47 @@ export default function CreateMeetingPage() {
                     <input type="date" className={inputCls} value={form.date}
                       onChange={(e) => updateField('date', e.target.value)} />
                   </div>
-                  <div>
+                  <div className="col-span-2 sm:col-span-1">
                     <label className={labelCls}>
                       <span className="flex items-center gap-1"><Clock size={11} /> Time <span className="text-red-400">*</span></span>
                     </label>
-                    <input className={inputCls} value={form.time}
-                      onChange={(e) => updateField('time', e.target.value)} placeholder="10:00 AM" />
+                    <div className="flex items-center gap-1">
+                      <div className="relative flex-1">
+                        <select
+                          className={`${inputCls} appearance-none pr-7`}
+                          value={form.time.split(' ')[0] || ''}
+                          onChange={(e) => {
+                            const part = form.time.split(' ')[1] || 'AM';
+                            updateField('time', `${e.target.value} ${part}`);
+                          }}
+                        >
+                          <option value="" disabled>Time</option>
+                          {['12:00', '12:30', '1:00', '1:30', '2:00', '2:30', '3:00', '3:30', '4:00', '4:30', '5:00', '5:30', '6:00', '6:30', '7:00', '7:30', '8:00', '8:30', '9:00', '9:30', '10:00', '10:30', '11:00', '11:30'].map((t) => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
+                        </select>
+                        <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      </div>
+                      <div className="flex border border-gray-200 rounded-lg overflow-hidden shrink-0">
+                        {['AM', 'PM'].map((p) => {
+                          const isActive = (form.time.split(' ')[1] || 'AM') === p;
+                          return (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => {
+                                const timeVal = form.time.split(' ')[0] || '12:00';
+                                updateField('time', `${timeVal} ${p}`);
+                              }}
+                              className={`px-2 py-2 text-[10px] font-bold transition-colors ${isActive ? 'bg-blue-600 text-white' : 'bg-white text-gray-400 hover:bg-gray-50'
+                                }`}
+                            >
+                              {p}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
                   <div>
                     <label className={labelCls}>Duration</label>
@@ -984,14 +1017,14 @@ export default function CreateMeetingPage() {
               <p className="text-xs font-bold tracking-widest uppercase text-blue-400 mb-3">Review Summary</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                  { label: 'Title',        value: form.title || '—' },
-                  { label: 'Date & Time',  value: form.date ? `${new Date(form.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${form.time}` : '—' },
+                  { label: 'Title', value: form.title || '—' },
+                  { label: 'Date & Time', value: form.date ? `${new Date(form.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · ${form.time}` : '—' },
                   { label: 'Agenda Items', value: form.agenda.filter((a) => a.trim()).length },
-                  { label: 'Attendees',    value: form.attendees.length },
-                  { label: 'Tasks',        value: form.tasks.length },
-                  { label: 'Location',     value: form.location || '—' },
-                  { label: 'Duration',     value: form.duration },
-                  { label: 'Status',       value: form.status },
+                  { label: 'Attendees', value: form.attendees.length },
+                  { label: 'Tasks', value: form.tasks.length },
+                  { label: 'Location', value: form.location || '—' },
+                  { label: 'Duration', value: form.duration },
+                  { label: 'Status', value: form.status },
                 ].map(({ label, value }) => (
                   <div key={label}>
                     <p className="text-xs text-blue-400">{label}</p>
@@ -1027,10 +1060,9 @@ export default function CreateMeetingPage() {
             {steps.map((s) => (
               <div
                 key={s.id}
-                className={`h-1.5 rounded-full transition-all ${
-                  s.id === currentStep ? 'w-6 bg-blue-600' :
-                  s.id < currentStep   ? 'w-3 bg-green-400' : 'w-3 bg-gray-200'
-                }`}
+                className={`h-1.5 rounded-full transition-all ${s.id === currentStep ? 'w-6 bg-blue-600' :
+                    s.id < currentStep ? 'w-3 bg-green-400' : 'w-3 bg-gray-200'
+                  }`}
               />
             ))}
           </div>

@@ -34,10 +34,7 @@ interface Pagination {
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
-// TODO: replace with your real auth/session user id
-let CURRENT_USER_ID: string;
-if (typeof window != "undefined")
-CURRENT_USER_ID = JSON.parse(localStorage.getItem("data") || "")?.id;
+// ─── Constants ─────────────────────────────────────────────────────────────
 
 const statusConfig = {
   completed:   { label: 'Completed',   color: 'bg-green-100 text-green-700', icon: CheckCircle, iconColor: 'text-green-500' },
@@ -72,6 +69,9 @@ function formatDate(dateStr: string) {
 export default function MyTasksPage() {
   const router = useRouter();
 
+  // ── Auth state ───────────────────────────────────────────────────────────
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
   // ── API state ────────────────────────────────────────────────────────────
   const [tasks, setTasks]           = useState<Task[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
@@ -85,8 +85,33 @@ export default function MyTasksPage() {
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [groupBy, setGroupBy]               = useState<GroupBy>('none');
 
+  // Handle user ID retrieval safely
+  useEffect(() => {
+    try {
+      const storedData = localStorage.getItem("data");
+      if (storedData) {
+        const userData = JSON.parse(storedData);
+        if (userData?.id) {
+          setCurrentUserId(userData.id);
+        } else {
+          setError("No valid user ID found. Please log in again.");
+          setLoading(false);
+        }
+      } else {
+        setError("No user data found. Please log in.");
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Error parsing user data:", err);
+      setError("Session error. Please log in again.");
+      setLoading(false);
+    }
+  }, []);
+
   // ── Fetch ────────────────────────────────────────────────────────────────
   const fetchTasks = useCallback(async () => {
+    if (!currentUserId) return;
+
     setLoading(true);
     setError(null);
     try {
@@ -97,7 +122,7 @@ export default function MyTasksPage() {
       if (statusFilter   !== 'all') q.set('status',   statusFilter);
       if (priorityFilter !== 'all') q.set('priority', priorityFilter);
 
-      const res  = await fetch(`/api/tasks/${CURRENT_USER_ID}`);
+      const res  = await fetch(`/api/tasks/${currentUserId}?${q.toString()}`);
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
       const json = await res.json();
       if (!json.success) throw new Error(json.message ?? 'API error');
@@ -109,11 +134,13 @@ export default function MyTasksPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, priorityFilter]);
+  }, [page, statusFilter, priorityFilter, currentUserId]);
 
   useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+    if (currentUserId) {
+      fetchTasks();
+    }
+  }, [fetchTasks, currentUserId]);
 
   // Reset page when server-side filters change
   const handleStatusChange = (val: StatusFilter) => {
