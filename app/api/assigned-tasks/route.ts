@@ -32,38 +32,83 @@ export async function GET(req: NextRequest) {
     const status    = searchParams.get("status");
     const meetingId = searchParams.get("meetingId");
 
-    const meetingFilter: Record<string, unknown> = {
-      "organizer.userId": user.id,  // ← was "organizer.id", now matches schema
-      "tasks.0": { $exists: true }, // meeting has at least one task
-    };
+    const userObjectId = new mongoose.Types.ObjectId(user.id);
 
-    if (meetingId) meetingFilter["_id"] = new mongoose.Types.ObjectId(meetingId);
+    const pipeline: any[] = [
+      // 1. Match meetings where the user is the organizer and tasks exist
+      {
+        $match: {
+          "organizer.userId": user.id,
+          "tasks.0": { $exists: true },
+          ...(meetingId ? { _id: new mongoose.Types.ObjectId(meetingId) } : {}),
+        }
+      },
 
-    const meetings = await Meeting.find(meetingFilter)
-      .select("title date tasks organizer")
-      .lean();
+      // 2. Unwind tasks to process them individually
+      { $unwind: "$tasks" },
 
-    // Flatten — keep only tasks assigned to someone other than the organizer
-    const tasks = meetings.flatMap((meeting: any) =>
-      (meeting.tasks as any[])
-        .filter((task) => {
-          const assignedTo    = task.assignedTo?.toString();
-          const notSelf       = assignedTo !== user.id;
-          const matchesStatus = status ? task.status === status : true;
-          return notSelf && matchesStatus;
-        })
-        .map((task) => ({
-          _id:          task._id,
-          title:        task.title,
-          assignedTo:   task.assignedTo,
-          dueDate:      task.dueDate,
-          status:       task.status,
-          priority:     task.priority,
-          meetingId:    meeting._id,
-          meetingTitle: meeting.title,
-          meetingDate:  meeting.date,
-        }))
-    );
+      // 3. Filter tasks: Not self-assigned, and match status if provided
+      {
+        $match: {
+          "tasks.assignedTo": { $ne: userObjectId },
+          ...(status ? { "tasks.status": status } : {}),
+        }
+      },
+
+      // 4. Join with attendees to check if the assignee has declined
+      {
+        $addFields: {
+          assigneeStatus: {
+            $filter: {
+              input: "$attendees",
+              as: "a",
+              cond: { $eq: ["$$a.userId", "$tasks.assignedTo"] }
+            }
+          }
+        }
+      },
+      {
+        $match: {
+          "assigneeStatus.status": { $ne: "declined" }
+        }
+      },
+
+      // 5. Lookup assignee name from users collection
+      {
+        $lookup: {
+          from: "users",
+          localField: "tasks.assignedTo",
+          foreignField: "_id",
+          as: "assigneeInfo"
+        }
+      },
+
+      // 6. Project final shape
+      {
+        $project: {
+          _id:          "$tasks._id",
+          title:        "$tasks.title",
+          assignedTo:   "$tasks.assignedTo",
+          assignedToName: { 
+            $ifNull: [
+              { $arrayElemAt: ["$assigneeInfo.name", 0] },
+              "Unknown"
+            ]
+          },
+          dueDate:      "$tasks.dueDate",
+          status:       "$tasks.status",
+          priority:     "$tasks.priority",
+          meetingId:    "$_id",
+          meetingTitle: "$title",
+          meetingDate:  "$date",
+        }
+      },
+      
+      // 7. Sort by due date
+      { $sort: { dueDate: 1 } }
+    ];
+
+    const tasks = await Meeting.aggregate(pipeline);
 
     return NextResponse.json({
       success: true,

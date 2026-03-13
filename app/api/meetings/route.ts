@@ -21,7 +21,7 @@ function getUserFromRequest(req: NextRequest): { id: string; email: string; name
 // ─── Zod validation schema ─────────────────────────────────────────────────
 
 const AttendeeSchema = z.object({
-  id: z.string().optional(),                                          // ← added
+  userId: z.string().optional(),
   name: z.string().min(1, "Attendee name is required"),
   email: z.string().email("Invalid attendee email"),
   status: z.enum(["accepted", "declined", "pending"]).default("pending"),
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
       // ── Preserve attendee IDs if the client supplied them ─────────────
       attendees: data.attendees.map((a) => ({
         ...a,
-        id: a.id ?? "",                           // ← was missing before
+        userId: a.userId ?? "",                           // ← was id before
       })),
 
       tasks: data.tasks.map((t) => ({
@@ -165,10 +165,10 @@ export async function GET(req: NextRequest) {
 
     const filter: Record<string, unknown> = {
       $or: [
-        { "organizer.id":    user.id    },  // created by me  (ID match)
-        { "organizer.email": user.email },  // created by me  (email fallback)
-        { "attendees.id":    user.id    },  // invited to     (ID match)
-        { "attendees.email": user.email },  // invited to     (email fallback)
+        { "organizer.userId": user.id },    // created by me (ID match)
+        { "organizer.email":  user.email }, // created by me (email fallback)
+        { "attendees.userId": user.id },    // invited to (ID match)
+        { "attendees.email":  user.email }, // invited to (email fallback)
       ],
     };
 

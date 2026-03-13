@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, Plus, History, CheckSquare, Users, Settings, Bell, LogOut, ChevronRight, LucideIcon } from 'lucide-react';
 
@@ -20,6 +21,20 @@ interface SidebarProps {
 export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [pendingCount, setPendingCount] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const res = await fetch('/api/notifications/count');
+        const json = await res.json();
+        if (json.success) setPendingCount(json.pendingCount);
+      } catch (e) {}
+    };
+    fetchCount();
+    const interval = setInterval(fetchCount, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   const navigationItems: NavigationItem[] = [
     { 
@@ -61,7 +76,6 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
 
   const handleNavigation = (route: string) => {
     router.push(route);
-    // Close sidebar on mobile after navigation
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       setSidebarOpen?.(false);
     }
@@ -74,7 +88,6 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
 
   return (
     <>
-      {/* Overlay for mobile - Click to close sidebar */}
       {sidebarOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-black/50 z-30"
@@ -82,7 +95,6 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`
           fixed lg:static inset-y-0 left-0 z-40
@@ -92,7 +104,6 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
           flex flex-col
         `}
       >
-        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto p-4">
           <div className="space-y-1">
             {navigationItems.map((item) => {
@@ -127,7 +138,6 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
             })}
           </div>
 
-          {/* Quick Stats */}
           <div className="mt-6 p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-100">
             <h3 className="text-xs font-semibold text-gray-700 mb-3">Quick Stats</h3>
             <div className="space-y-2">
@@ -147,12 +157,18 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
           </div>
         </nav>
 
-        {/* Bottom Actions */}
         <div className="p-4 border-t border-gray-200 space-y-2">
-          <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+          <button 
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors relative"
+            onClick={() => handleNavigation('/dashboard')}
+          >
             <Bell className="w-5 h-5 text-gray-400" />
             <span className="text-sm font-medium">Notifications</span>
-            <span className="ml-auto bg-red-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">3</span>
+            {pendingCount > 0 && (
+              <span className="ml-auto bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-bounce">
+                {pendingCount}
+              </span>
+            )}
           </button>
           
           <button className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">

@@ -23,10 +23,12 @@ interface DashboardData {
     hostedCount: number;
     invitedCount: number;
     todayCount: number;
+    pendingCount: number;
   };
   todayMeetings: Meeting[];
   hostedMeetings: Meeting[];
   invitedMeetings: Meeting[];
+  pendingInvitations: Meeting[];
 }
 
 interface MeetingCardProps {
@@ -65,9 +67,9 @@ export default function DashboardPage() {
 
   function handleRoute(id: string, route: string) {
     if (route === 'view') {
-      router.push(`/meetings/${id}`);
+      router.push(`/dashboard/view/${id}`);
     } else {
-      router.push(`/meetings/edit/${id}`);
+      router.push(`/dashboard/edit/${id}`);
     }
   }
 
@@ -230,6 +232,54 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Pending Invitations Section */}
+        {data && data.pendingInvitations.length > 0 && (
+          <div className="mb-8 overflow-hidden">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Users className="w-5 h-5 text-orange-600" />
+              </div>
+              New Invitations
+              <span className="bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full ml-1 animate-pulse">
+                {data.pendingInvitations.length}
+              </span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {data.pendingInvitations.map((invitation) => (
+                <div 
+                  key={invitation._id} 
+                  className="bg-white rounded-2xl border-2 border-orange-100 hover:border-orange-200 p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                  onClick={() => router.push(`/dashboard/view/${invitation._id}`)}
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="font-bold text-gray-900 group-hover:text-orange-600 transition-colors truncate flex-1 pr-2">{invitation.title}</h3>
+                    <div className="flex items-center gap-1 text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-lg uppercase">
+                      Invited
+                    </div>
+                  </div>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                      <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                      {new Date(invitation.date).toLocaleDateString()}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                      <Clock className="w-3.5 h-3.5 text-gray-400" />
+                      {invitation.time}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                      <User className="w-3.5 h-3.5 text-gray-400" />
+                      <span className="truncate">By {invitation.organizer.name || invitation.organizer.email}</span>
+                    </div>
+                  </div>
+                  <button className="w-full py-2 bg-orange-600 text-white rounded-xl text-xs font-bold hover:bg-orange-700 transition-colors shadow-sm active:scale-95">
+                    View Invitation
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Today's Schedule */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 mb-8 text-white shadow-lg">

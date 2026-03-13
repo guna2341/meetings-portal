@@ -3,7 +3,7 @@ import { db } from "@/src/lib/db";
 import Meeting from "@/src/models/meeting";
 import mongoose from "mongoose";
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 function isValidObjectId(id: string) {
   return mongoose.Types.ObjectId.isValid(id);
@@ -12,7 +12,8 @@ function isValidObjectId(id: string) {
 // ─── GET /api/meetings/[id] ────────────────────────────────────────────────
 
 export async function GET(_req: NextRequest, { params }: Params) {
-  if (!isValidObjectId(params.id)) {
+  const { id } = await params;
+  if (!isValidObjectId(id)) {
     return NextResponse.json(
       { success: false, message: "Invalid meeting ID" },
       { status: 400 }
@@ -22,7 +23,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   try {
     await db;
 
-    const meeting = await Meeting.findById(params.id).lean();
+    const meeting = await Meeting.findById(id).lean();
 
     if (!meeting) {
       return NextResponse.json(
@@ -44,7 +45,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
 // ─── PUT /api/meetings/[id] ────────────────────────────────────────────────
 
 export async function PUT(req: NextRequest, { params }: Params) {
-  if (!isValidObjectId(params.id)) {
+  const { id } = await params;
+  if (!isValidObjectId(id)) {
     return NextResponse.json(
       { success: false, message: "Invalid meeting ID" },
       { status: 400 }
@@ -66,7 +68,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     }
 
     const meeting = await Meeting.findByIdAndUpdate(
-      params.id,
+      id,
       { $set: body },
       { new: true, runValidators: true }
     ).lean();
@@ -103,7 +105,8 @@ export async function PUT(req: NextRequest, { params }: Params) {
 // ─── DELETE /api/meetings/[id] ─────────────────────────────────────────────
 
 export async function DELETE(_req: NextRequest, { params }: Params) {
-  if (!isValidObjectId(params.id)) {
+  const { id } = await params;
+  if (!isValidObjectId(id)) {
     return NextResponse.json(
       { success: false, message: "Invalid meeting ID" },
       { status: 400 }
@@ -113,7 +116,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   try {
     await db;
 
-    const meeting = await Meeting.findByIdAndDelete(params.id);
+    const meeting = await Meeting.findByIdAndDelete(id);
 
     if (!meeting) {
       return NextResponse.json(

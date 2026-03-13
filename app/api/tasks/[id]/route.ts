@@ -3,7 +3,7 @@ import { db } from "@/src/lib/db";
 import Meeting from "@/src/models/meeting";
 import mongoose from "mongoose";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await db;
 
@@ -36,12 +36,36 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       { $unwind: "$tasks" },
 
       // 3. Keep only tasks assigned to this user + optional filters
+      // AND only if the user hasn't declined the meeting
       {
         $match: {
           "tasks.assignedTo": userObjectId,
           ...(status   ? { "tasks.status":   status   } : {}),
           ...(priority ? { "tasks.priority": priority } : {}),
         },
+      },
+
+      // 3.5 Filter out tasks from declined meetings
+      {
+        $addFields: {
+          myAttendeeStatus: {
+            $filter: {
+              input: "$attendees",
+              as: "attendee",
+              cond: { 
+                $or: [
+                  { $eq: ["$$attendee.userId", userId] },
+                  { $eq: ["$$attendee.userId", userObjectId] } // fallback check
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        $match: {
+          "myAttendeeStatus.status": { $ne: "declined" }
+        }
       },
 
       // 4. Shape output — pull meeting context alongside task fields
@@ -57,7 +81,28 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           meetingTitle:  "$title",
           meetingDate:   "$date",
           meetingStatus: "$status",
+          attendees:     "$attendees", // keep for status filter
         },
+      },
+
+      // 4.5 Look up assignee name from users collection
+      {
+        $lookup: {
+          from: "users",
+          localField: "assignedTo",
+          foreignField: "_id",
+          as: "assigneeInfo",
+        },
+      },
+      {
+        $addFields: {
+          assignedToName: { 
+            $ifNull: [
+              { $arrayElemAt: ["$assigneeInfo.name", 0] },
+              "you" 
+            ]
+          }
+        }
       },
 
       // 5. Add sort order for priority

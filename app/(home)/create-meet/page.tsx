@@ -20,6 +20,7 @@ interface ApiUser {
 
 interface Attendee {
   id: number;
+  userId?: string;
   name: string;
   email: string;
 }
@@ -463,7 +464,7 @@ export default function CreateMeetingPage() {
   const addAttendeeFromUser = (user: ApiUser) =>
     setForm((f) => ({
       ...f,
-      attendees: [...f.attendees, { id: Date.now(), name: user.name, email: user.email }],
+      attendees: [...f.attendees, { id: Date.now(), userId: user._id, name: user.name, email: user.email }],
     }));
   const removeAttendee = (id: number) =>
     setForm((f) => ({ ...f, attendees: f.attendees.filter((a) => a.id !== id) }));
@@ -525,7 +526,7 @@ export default function CreateMeetingPage() {
         building: form.building || undefined,
         status: form.status,
         organizer: form.organizer,
-        attendees: form.attendees.map(({ name, email }) => ({ name, email, status: 'pending' as const })),
+        attendees: form.attendees.map(({ name, email, userId }) => ({ name, email, userId, status: 'pending' as const })),
         agenda: form.agenda.filter((a) => a.trim() !== ''),
         tasks: form.tasks
           .filter((t) => t.title.trim() !== '' && t.assignedTo !== '')
@@ -585,7 +586,7 @@ export default function CreateMeetingPage() {
           </div>
           <div className="flex flex-col gap-3">
             <button
-              onClick={() => router.push(`/meetings/${createdId}`)}
+              onClick={() => router.push(`/dashboard/view/${createdId}`)}
               className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
             >
               View Meeting

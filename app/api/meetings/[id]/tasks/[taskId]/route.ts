@@ -24,7 +24,7 @@ const PatchSchema = z.object({
 // PATCH /api/meetings/[meetingId]/tasks/[taskId]
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string; taskId: string } }
+  { params }: { params: Promise<{ id: string; taskId: string }> }
 ) {
   try {
     await db;

@@ -414,10 +414,10 @@ export default function AssignedByMePage() {
                                 </span>
                                 <span className="flex items-center gap-1.5 text-xs text-gray-400">
                                   <User size={12} />
-                                  Assigned to: <span className="font-mono text-gray-300 text-xs ml-1">{task.assignedTo}</span>
+                                  Assigned to: <span className="font-semibold text-gray-600 ml-1">{(task as any).assignedToName || task.assignedTo}</span>
                                 </span>
                                 <button
-                                  onClick={() => router.push(`/meetings/${task.meetingId}`)}
+                                  onClick={() => router.push(`/dashboard/view/${task.meetingId}`)}
                                   className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
                                 >
                                   {task.meetingTitle} <ArrowRight size={11} />

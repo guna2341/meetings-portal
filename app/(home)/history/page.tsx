@@ -385,7 +385,7 @@ export default function MeetingHistoryPage() {
                             {/* Actions */}
                             <div className="flex items-center gap-2 shrink-0">
                               <button
-                                onClick={() => router.push(`/meetings/${meeting._id}`)}
+                                onClick={() => router.push(`/dashboard/view/${meeting._id}`)}
                                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 transition-colors"
                               >
                                 View <ArrowRight size={12} />

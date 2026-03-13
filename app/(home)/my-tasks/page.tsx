@@ -437,10 +437,10 @@ export default function MyTasksPage() {
                               </span>
                               <span className="flex items-center gap-1.5 text-xs text-gray-500">
                                 <Users size={12} className="text-gray-400" />
-                                Assigned to {task.assignedTo}
+                                Assigned to {(task as any).assignedToName || 'you'}
                               </span>
                               <button
-                                onClick={() => router.push(`/meetings/${task.meetingId}`)}
+                                onClick={() => router.push(`/dashboard/view/${task.meetingId}`)}
                                 className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
                               >
                                 {task.meetingTitle} <ArrowRight size={11} />

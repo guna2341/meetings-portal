@@ -1,22 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Calendar, Clock, Users, MapPin, Building, ArrowLeft,
   Plus, Trash2, Save, X, GripVertical, ChevronDown,
-  CheckCircle, XCircle, User
+  CheckCircle, XCircle, User, Loader2, AlertCircle
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 
 interface Attendee {
-  id: number;
+  _id: string;
   name: string;
   email: string;
   status: 'accepted' | 'declined' | 'pending';
 }
 
 interface Task {
-  id: number;
+  _id: string;
   title: string;
   assignedTo: string;
   dueDate: string;
@@ -25,14 +25,14 @@ interface Task {
 }
 
 interface Note {
-  id: number;
+  _id: string;
   author: string;
   content: string;
   timestamp: string;
 }
 
 interface MeetingDetails {
-  id: number;
+  _id: string;
   title: string;
   description: string;
   date: string;
@@ -41,51 +41,12 @@ interface MeetingDetails {
   location: string;
   building: string;
   status: 'upcoming' | 'completed' | 'cancelled';
-  organizer: { name: string; email: string };
+  organizer: { name: string; email: string; userId?: string };
   attendees: Attendee[];
   tasks: Task[];
   notes: Note[];
   agenda: string[];
 }
-
-const initialMeeting: MeetingDetails = {
-  id: 1,
-  title: 'Q1 Planning Review',
-  description:
-    'Quarterly planning and goal setting session for Q1 2026. We will discuss budget allocation, team objectives, key performance indicators, and strategic initiatives for the upcoming quarter.',
-  date: '2026-02-20',
-  time: '10:00 AM',
-  duration: '60 min',
-  location: 'Conference Room A',
-  building: 'Main Office - 3rd Floor',
-  status: 'upcoming',
-  organizer: { name: 'John Doe', email: 'john.doe@company.com' },
-  attendees: [
-    { id: 1, name: 'Sarah Johnson', email: 'sarah.j@company.com', status: 'accepted' },
-    { id: 2, name: 'Michael Chen', email: 'michael.c@company.com', status: 'accepted' },
-    { id: 3, name: 'Emma Davis', email: 'emma.d@company.com', status: 'pending' },
-    { id: 4, name: 'Alex Kumar', email: 'alex.k@company.com', status: 'accepted' },
-    { id: 5, name: 'Lisa Wong', email: 'lisa.w@company.com', status: 'declined' },
-  ],
-  tasks: [
-    { id: 1, title: 'Prepare Q1 Budget Report', assignedTo: 'Sarah Johnson', dueDate: '2026-02-19', status: 'in-progress', priority: 'high' },
-    { id: 2, title: 'Compile Team KPIs', assignedTo: 'Michael Chen', dueDate: '2026-02-19', status: 'completed', priority: 'high' },
-    { id: 3, title: 'Review Strategic Initiatives', assignedTo: 'Emma Davis', dueDate: '2026-02-20', status: 'pending', priority: 'medium' },
-  ],
-  notes: [
-    { id: 1, author: 'John Doe', content: 'Please review the budget proposals before the meeting. Focus on departments with over 20% variance.', timestamp: '2026-02-15 2:30 PM' },
-    { id: 2, author: 'Sarah Johnson', content: 'Budget report draft is ready for review. Shared in the drive folder.', timestamp: '2026-02-16 10:15 AM' },
-  ],
-  agenda: [
-    'Opening remarks and objectives',
-    'Q4 performance review',
-    'Q1 budget allocation discussion',
-    'Team goals and KPIs setting',
-    'Strategic initiatives presentation',
-    'Q&A and open discussion',
-    'Action items and next steps',
-  ],
-};
 
 const inputCls =
   'w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all';
@@ -132,61 +93,143 @@ const getPriorityColor = (priority: string) => {
 
 export default function MeetingEditPage() {
   const router = useRouter();
-  const [meeting, setMeeting] = useState<MeetingDetails>(initialMeeting);
+  const params = useParams();
+  const id = params.id as string;
+
+  const [meeting, setMeeting] = useState<MeetingDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchMeeting = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/meetings/${id}`);
+        const json = await res.json();
+        if (json.success) {
+          // Format date for the input
+          const formattedData = {
+            ...json.data,
+            date: new Date(json.data.date).toISOString().split('T')[0],
+            tasks: json.data.tasks?.map((t: any) => ({
+              ...t,
+              dueDate: t.dueDate ? new Date(t.dueDate).toISOString().split('T')[0] : ''
+            })) || []
+          };
+          setMeeting(formattedData);
+        } else {
+          setError(json.message || 'Failed to load meeting');
+        }
+      } catch (err) {
+        setError('Network error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (id) fetchMeeting();
+  }, [id]);
 
   const updateField = <K extends keyof MeetingDetails>(key: K, value: MeetingDetails[K]) =>
-    setMeeting((m) => ({ ...m, [key]: value }));
+    setMeeting((m) => m ? ({ ...m, [key]: value }) : null);
 
   const updateAgendaItem = (i: number, val: string) =>
-    setMeeting((m) => { const a = [...m.agenda]; a[i] = val; return { ...m, agenda: a }; });
-  const addAgendaItem = () => setMeeting((m) => ({ ...m, agenda: [...m.agenda, ''] }));
+    setMeeting((m) => { 
+      if (!m) return null;
+      const a = [...m.agenda]; a[i] = val; return { ...m, agenda: a }; 
+    });
+  const addAgendaItem = () => setMeeting((m) => m ? ({ ...m, agenda: [...m.agenda, ''] }) : null);
   const removeAgendaItem = (i: number) =>
-    setMeeting((m) => ({ ...m, agenda: m.agenda.filter((_, idx) => idx !== i) }));
+    setMeeting((m) => m ? ({ ...m, agenda: m.agenda.filter((_, idx) => idx !== i) }) : null);
 
-  const updateAttendee = (id: number, field: keyof Attendee, val: string) =>
-    setMeeting((m) => ({
+  const updateAttendee = (_id: string, field: keyof Attendee, val: string) =>
+    setMeeting((m) => m ? ({
       ...m,
-      attendees: m.attendees.map((a) => (a.id === id ? { ...a, [field]: val } : a)),
-    }));
+      attendees: m.attendees.map((a) => (a._id === _id ? { ...a, [field]: val } : a)),
+    }) : null);
   const addAttendee = () =>
-    setMeeting((m) => ({
+    setMeeting((m) => m ? ({
       ...m,
-      attendees: [...m.attendees, { id: Date.now(), name: '', email: '', status: 'pending' }],
-    }));
-  const removeAttendee = (id: number) =>
-    setMeeting((m) => ({ ...m, attendees: m.attendees.filter((a) => a.id !== id) }));
+      attendees: [...m.attendees, { _id: Date.now().toString(), name: '', email: '', status: 'pending' } as any],
+    }) : null);
+  const removeAttendee = (_id: string) =>
+    setMeeting((m) => m ? ({ ...m, attendees: m.attendees.filter((a) => a._id !== _id) }) : null);
 
-  const updateTask = (id: number, field: keyof Task, val: string) =>
-    setMeeting((m) => ({
+  const updateTask = (_id: string, field: keyof Task, val: string) =>
+    setMeeting((m) => m ? ({
       ...m,
-      tasks: m.tasks.map((t) => (t.id === id ? { ...t, [field]: val } : t)),
-    }));
+      tasks: m.tasks.map((t) => (t._id === _id ? { ...t, [field]: val } : t)),
+    }) : null);
   const addTask = () =>
-    setMeeting((m) => ({
+    setMeeting((m) => m ? ({
       ...m,
-      tasks: [...m.tasks, { id: Date.now(), title: '', assignedTo: '', dueDate: '', status: 'pending', priority: 'medium' }],
-    }));
-  const removeTask = (id: number) =>
-    setMeeting((m) => ({ ...m, tasks: m.tasks.filter((t) => t.id !== id) }));
+      tasks: [...m.tasks, { _id: Date.now().toString(), title: '', assignedTo: '', dueDate: '', status: 'pending', priority: 'medium' } as any],
+    }) : null);
+  const removeTask = (_id: string) =>
+    setMeeting((m) => m ? ({ ...m, tasks: m.tasks.filter((t) => t._id !== _id) }) : null);
 
-  const updateNote = (id: number, val: string) =>
-    setMeeting((m) => ({
+  const updateNote = (_id: string, val: string) =>
+    setMeeting((m) => m ? ({
       ...m,
-      notes: m.notes.map((n) => (n.id === id ? { ...n, content: val } : n)),
-    }));
+      notes: m.notes.map((n) => (n._id === _id ? { ...n, content: val } : n)),
+    }) : null);
   const addNote = () =>
-    setMeeting((m) => ({
+    setMeeting((m) => m ? ({
       ...m,
-      notes: [...m.notes, { id: Date.now(), author: m.organizer.name, content: '', timestamp: new Date().toLocaleString() }],
-    }));
-  const removeNote = (id: number) =>
-    setMeeting((m) => ({ ...m, notes: m.notes.filter((n) => n.id !== id) }));
+      notes: [...m.notes, { _id: Date.now().toString(), author: m.organizer.name, content: '', timestamp: new Date().toISOString() } as any],
+    }) : null);
+  const removeNote = (_id: string) =>
+    setMeeting((m) => m ? ({ ...m, notes: m.notes.filter((n) => n._id !== _id) }) : null);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const handleSave = async () => {
+    if (!meeting) return;
+    try {
+      setSaving(true);
+      const res = await fetch(`/api/meetings/${meeting._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(meeting),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+      } else {
+        alert(json.message || 'Save failed');
+      }
+    } catch (err) {
+      alert('Network error while saving');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 font-medium">Loading meeting data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !meeting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-6">
+        <div className="max-w-md w-full bg-white rounded-2xl border border-red-100 p-8 text-center shadow-sm">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Error</h2>
+          <p className="text-gray-600 mb-6">{error || 'Meeting not found'}</p>
+          <button onClick={() => router.back()} className="w-full py-2.5 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors">
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const acceptedCount = meeting.attendees.filter((a) => a.status === 'accepted').length;
   const declinedCount = meeting.attendees.filter((a) => a.status === 'declined').length;
@@ -195,7 +238,7 @@ export default function MeetingEditPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sticky top action bar */}
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shadow-sm">
         <button
           onClick={() => router.back()}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm font-medium transition-colors"
@@ -206,18 +249,20 @@ export default function MeetingEditPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+            disabled={saving}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             <X size={14} /> Discard
           </button>
           <button
             onClick={handleSave}
+            disabled={saving}
             className={`flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
               saved ? 'bg-green-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
-            }`}
+            } disabled:opacity-70`}
           >
-            <Save size={14} />
-            {saved ? 'Saved!' : 'Save Changes'}
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {saved ? 'Saved!' : saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>
@@ -231,7 +276,7 @@ export default function MeetingEditPage() {
               {meeting.status}
             </span>
           </div>
-          <p className="text-gray-500 text-sm mt-1">Update the details below and save your changes.</p>
+          <p className="text-gray-500 text-sm mt-1 italic">Update the meeting details and press &quot;Save Changes&quot; to persist.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -354,7 +399,7 @@ export default function MeetingEditPage() {
                     />
                     <button
                       onClick={() => removeAgendaItem(i)}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                      className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all font-bold"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -362,7 +407,7 @@ export default function MeetingEditPage() {
                 ))}
                 <button
                   onClick={addAgendaItem}
-                  className="mt-2 flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                  className="mt-2 flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-bold transition-colors"
                 >
                   <Plus size={15} /> Add Agenda Item
                 </button>
@@ -373,18 +418,18 @@ export default function MeetingEditPage() {
             <SectionCard title="Related Tasks">
               <div className="flex flex-col gap-3">
                 {meeting.tasks.map((task) => (
-                  <div key={task.id} className="group bg-gray-50 border border-gray-100 rounded-xl p-4">
+                  <div key={task._id} className="group bg-gray-50/50 border border-gray-100 rounded-xl p-4 shadow-sm">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${getPriorityColor(task.priority)}`}>
                           {task.priority}
                         </span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getTaskStatusColor(task.status)}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${getTaskStatusColor(task.status)}`}>
                           {task.status.replace('-', ' ')}
                         </span>
                       </div>
                       <button
-                        onClick={() => removeTask(task.id)}
+                        onClick={() => removeTask(task._id)}
                         className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
                       >
                         <Trash2 size={14} />
@@ -394,24 +439,24 @@ export default function MeetingEditPage() {
                       <div>
                         <label className={labelCls}>Task Title</label>
                         <input className={inputCls} value={task.title}
-                          onChange={(e) => updateTask(task.id, 'title', e.target.value)} placeholder="Task title" />
+                          onChange={(e) => updateTask(task._id, 'title', e.target.value)} placeholder="Task title" />
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         <div className="col-span-2 sm:col-span-1">
                           <label className={labelCls}>Assigned To</label>
                           <input className={inputCls} value={task.assignedTo}
-                            onChange={(e) => updateTask(task.id, 'assignedTo', e.target.value)} placeholder="Name" />
+                            onChange={(e) => updateTask(task._id, 'assignedTo', e.target.value)} placeholder="Name" />
                         </div>
                         <div>
                           <label className={labelCls}>Due Date</label>
                           <input type="date" className={inputCls} value={task.dueDate}
-                            onChange={(e) => updateTask(task.id, 'dueDate', e.target.value)} />
+                            onChange={(e) => updateTask(task._id, 'dueDate', e.target.value)} />
                         </div>
                         <div>
                           <label className={labelCls}>Status</label>
                           <div className="relative">
                             <select className={`${inputCls} appearance-none pr-7`} value={task.status}
-                              onChange={(e) => updateTask(task.id, 'status', e.target.value)}>
+                              onChange={(e) => updateTask(task._id, 'status', e.target.value)}>
                               <option value="pending">Pending</option>
                               <option value="in-progress">In Progress</option>
                               <option value="completed">Completed</option>
@@ -423,7 +468,7 @@ export default function MeetingEditPage() {
                           <label className={labelCls}>Priority</label>
                           <div className="relative">
                             <select className={`${inputCls} appearance-none pr-7`} value={task.priority}
-                              onChange={(e) => updateTask(task.id, 'priority', e.target.value)}>
+                              onChange={(e) => updateTask(task._id, 'priority', e.target.value)}>
                               <option value="low">Low</option>
                               <option value="medium">Medium</option>
                               <option value="high">High</option>
@@ -437,7 +482,7 @@ export default function MeetingEditPage() {
                 ))}
                 <button
                   onClick={addTask}
-                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-bold transition-colors"
                 >
                   <Plus size={15} /> Add Task
                 </button>
@@ -448,36 +493,36 @@ export default function MeetingEditPage() {
             <SectionCard title="Meeting Notes">
               <div className="flex flex-col gap-3">
                 {meeting.notes.map((note) => (
-                  <div key={note.id} className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+                  <div key={note._id} className="bg-gray-50/50 border border-gray-100 rounded-xl p-4 shadow-sm">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-700">
-                          {note.author.split(' ').map((n) => n[0]).join('')}
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-700 ring-2 ring-white">
+                          {note.author ? note.author.split(' ').map((n) => n[0]).join('') : '?'}
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-gray-900">{note.author}</p>
-                          <p className="text-xs text-gray-500">{note.timestamp}</p>
+                          <p className="text-sm font-bold text-gray-900">{note.author || 'Anonymous'}</p>
+                          <p className="text-[10px] text-gray-400 italic">{new Date(note.timestamp).toLocaleString()}</p>
                         </div>
                       </div>
                       <button
-                        onClick={() => removeNote(note.id)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                        onClick={() => removeNote(note._id)}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all font-bold"
                       >
                         <Trash2 size={14} />
                       </button>
                     </div>
                     <textarea
-                      className={`${inputCls} resize-none`}
+                      className={`${inputCls} resize-none italic font-medium`}
                       rows={3}
                       value={note.content}
-                      onChange={(e) => updateNote(note.id, e.target.value)}
-                      placeholder="Note content..."
+                      onChange={(e) => updateNote(note._id, e.target.value)}
+                      placeholder="Enter note content..."
                     />
                   </div>
                 ))}
                 <button
                   onClick={addNote}
-                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-bold transition-colors"
                 >
                   <Plus size={15} /> Add Note
                 </button>
@@ -492,35 +537,35 @@ export default function MeetingEditPage() {
             <SectionCard title={`Attendees (${meeting.attendees.length})`}>
               {/* Status summary */}
               <div className="grid grid-cols-3 gap-2 mb-4">
-                <div className="text-center p-2 bg-green-50 rounded-lg">
-                  <p className="text-lg font-bold text-green-600">{acceptedCount}</p>
-                  <p className="text-xs text-green-600">Accepted</p>
+                <div className="text-center p-2 bg-green-50 rounded-xl border border-green-100/50">
+                  <p className="text-lg font-black text-green-700">{acceptedCount}</p>
+                  <p className="text-[9px] text-green-500 font-bold uppercase tracking-tight">Accepted</p>
                 </div>
-                <div className="text-center p-2 bg-yellow-50 rounded-lg">
-                  <p className="text-lg font-bold text-yellow-600">{pendingCount}</p>
-                  <p className="text-xs text-yellow-600">Pending</p>
+                <div className="text-center p-2 bg-yellow-50 rounded-xl border border-yellow-100/50">
+                  <p className="text-lg font-black text-yellow-700">{pendingCount}</p>
+                  <p className="text-[9px] text-yellow-500 font-bold uppercase tracking-tight">Pending</p>
                 </div>
-                <div className="text-center p-2 bg-red-50 rounded-lg">
-                  <p className="text-lg font-bold text-red-600">{declinedCount}</p>
-                  <p className="text-xs text-red-600">Declined</p>
+                <div className="text-center p-2 bg-red-50 rounded-xl border border-red-100/50">
+                  <p className="text-lg font-black text-red-700">{declinedCount}</p>
+                  <p className="text-[9px] text-red-500 font-bold uppercase tracking-tight">Declined</p>
                 </div>
               </div>
 
               <div className="flex flex-col gap-3">
                 {meeting.attendees.map((attendee) => (
-                  <div key={attendee.id} className="group border border-gray-100 rounded-xl p-3 bg-gray-50">
+                  <div key={attendee._id} className="group border border-gray-100 rounded-xl p-3 bg-gray-50/50 hover:bg-white hover:shadow-md transition-all">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-700 shrink-0">
+                        <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-700 shrink-0 ring-2 ring-white shadow-sm">
                           {attendee.name ? attendee.name.split(' ').map((n) => n[0]).join('') : '?'}
                         </div>
                         {attendee.status === 'accepted' && <CheckCircle size={14} className="text-green-500" />}
                         {attendee.status === 'declined' && <XCircle size={14} className="text-red-500" />}
-                        {attendee.status === 'pending' && <User size={14} className="text-gray-400" />}
+                        {attendee.status === 'pending' && <Clock size={14} className="text-gray-400" />}
                       </div>
                       <button
-                        onClick={() => removeAttendee(attendee.id)}
-                        className="p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                        onClick={() => removeAttendee(attendee._id)}
+                        className="p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all font-bold"
                       >
                         <Trash2 size={13} />
                       </button>
@@ -529,21 +574,21 @@ export default function MeetingEditPage() {
                       <input
                         className={inputCls}
                         value={attendee.name}
-                        onChange={(e) => updateAttendee(attendee.id, 'name', e.target.value)}
+                        onChange={(e) => updateAttendee(attendee._id, 'name', e.target.value)}
                         placeholder="Full name"
                       />
                       <input
                         type="email"
                         className={inputCls}
                         value={attendee.email}
-                        onChange={(e) => updateAttendee(attendee.id, 'email', e.target.value)}
+                        onChange={(e) => updateAttendee(attendee._id, 'email', e.target.value)}
                         placeholder="Email address"
                       />
                       <div className="relative">
                         <select
                           className={`${inputCls} appearance-none pr-7`}
                           value={attendee.status}
-                          onChange={(e) => updateAttendee(attendee.id, 'status', e.target.value)}
+                          onChange={(e) => updateAttendee(attendee._id, 'status', e.target.value as any)}
                         >
                           <option value="pending">Pending</option>
                           <option value="accepted">Accepted</option>
@@ -556,16 +601,16 @@ export default function MeetingEditPage() {
                 ))}
                 <button
                   onClick={addAttendee}
-                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                  className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-bold transition-colors mt-2"
                 >
-                  <Plus size={15} /> <Users size={13} /> Add Attendee
+                  <Plus size={15} /> Add Attendee
                 </button>
               </div>
             </SectionCard>
 
             {/* Meeting Stats */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <h3 className="text-base font-semibold text-gray-900 mb-4">Meeting Statistics</h3>
+              <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Live Statistics</h3>
               {[
                 { label: 'Total Attendees', val: meeting.attendees.length },
                 { label: 'Tasks Assigned', val: meeting.tasks.length },
@@ -573,8 +618,8 @@ export default function MeetingEditPage() {
                 { label: 'Notes Added', val: meeting.notes.length },
               ].map(({ label, val }) => (
                 <div key={label} className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0">
-                  <span className="text-sm text-gray-600">{label}</span>
-                  <span className="text-sm font-semibold text-gray-900">{val}</span>
+                  <span className="text-sm font-bold text-gray-500 italic lowercase">{label}</span>
+                  <span className="text-sm font-black text-gray-900 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">{val}</span>
                 </div>
               ))}
             </div>
@@ -582,11 +627,13 @@ export default function MeetingEditPage() {
             {/* Save button */}
             <button
               onClick={handleSave}
-              className={`w-full py-3 rounded-xl text-sm font-semibold transition-all ${
-                saved ? 'bg-green-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
-              }`}
+              disabled={saving}
+              className={`w-full py-4 rounded-xl text-sm font-bold transition-all shadow-lg hover:shadow-xl transform active:scale-95 flex items-center justify-center gap-2 ${
+                saved ? 'bg-green-600 text-white' : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800'
+              } disabled:opacity-70 disabled:cursor-not-allowed`}
             >
-              {saved ? '✓ Changes Saved' : 'Save All Changes'}
+              {saving ? <Loader2 size={18} className="animate-spin" /> : saved ? <CheckCircle size={18} /> : <Save size={18} />}
+              {saved ? '✓ Changes Saved Successfully' : saving ? 'Syncing with Server...' : 'Save All Changes'}
             </button>
           </div>
         </div>
