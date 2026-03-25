@@ -106,119 +106,114 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-6 py-8">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center shadow-sm">
+    <div className="max-w-6xl mx-auto px-6 py-12">
+      {/* Header Section */}
+      <div className="flex items-center justify-between mb-10 pb-4 border-b-2 border-gray-100">
+        <h1 className="text-2xl font-black text-gray-900 flex items-center gap-3">
           <Bell className="w-6 h-6 text-blue-600" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-          <p className="text-gray-500">Manage your pending meeting invitations</p>
-        </div>
+          Notifications
+          <span className="ml-2 px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-black rounded-full uppercase tracking-tighter">
+            {invitations.length} New
+          </span>
+        </h1>
+        
+        <button 
+          onClick={() => router.push("/dashboard")}
+          className="text-xs font-bold text-gray-400 hover:text-gray-900 transition-colors"
+        >
+          View Dashboard
+        </button>
       </div>
 
       {invitations.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-2xl border border-gray-200 shadow-sm">
-          <Bell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">You're all caught up!</h3>
-          <p className="text-gray-500 max-w-sm mx-auto">
-            There are currently no new meeting requests awaiting your response. Return to the dashboard to see your upcoming schedule.
-          </p>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="mt-6 px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition"
-          >
-            Go to Dashboard
-          </button>
+        <div className="py-20 text-center bg-gray-50/50 rounded-3xl border-2 border-dashed border-gray-100 italic text-gray-400 font-medium">
+          No pending notifications to show.
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {invitations.map((meeting) => (
-            <div
-              key={meeting._id}
-              className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow relative overflow-hidden"
-            >
-              <div className="absolute top-0 left-0 w-1.5 h-full bg-orange-400"></div>
-              
-              <div className="flex justify-between items-start mb-4 pl-2">
-                <h3 className="text-lg font-bold text-gray-900 pr-4 leading-tight">
-                  {meeting.title}
-                </h3>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter shrink-0 ${
-                  meeting.meetingType === 'online' ? 'bg-blue-100 text-blue-700' :
-                  meeting.meetingType === 'hybrid' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'
-                }`}>
-                  {meeting.meetingType}
-                </span>
-              </div>
+        <div className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="divide-y divide-gray-100">
+            {invitations.map((meeting, index) => (
+              <div
+                key={meeting._id}
+                className="group flex flex-col md:flex-row md:items-center gap-4 p-5 hover:bg-gray-50/80 transition-all duration-200 animate-in fade-in"
+                style={{ animationDelay: `${index * 30}ms` }}
+              >
+                {/* Left: Indicator */}
+                <div className="hidden md:block w-1 h-8 bg-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
-              <div className="space-y-3 mb-6 pl-2">
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <User className="w-4 h-4 text-gray-400" />
-                  <span>
-                    Invited by <span className="font-medium text-gray-900">{meeting.organizer?.name || meeting.organizer?.email}</span>
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-3 text-sm text-gray-600 bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-                  <Calendar className="w-4 h-4 text-gray-500" />
-                  <span className="font-medium text-gray-800">
-                    {new Date(meeting.date).toLocaleDateString(undefined, {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric'
-                    })}
-                  </span>
-                  <span className="w-1 h-1 rounded-full bg-gray-300 mx-1"></span>
-                  <Clock className="w-4 h-4 text-gray-500" />
-                  <span className="font-medium text-gray-800">{meeting.time} <span className="text-gray-500 font-normal text-xs">({meeting.duration})</span></span>
+                {/* Left: Avatar */}
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-xs font-black text-gray-600 border border-gray-200">
+                    {meeting.organizer?.name?.[0] || 'U'}
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <MapPin className="w-4 h-4 text-gray-400" />
-                  <span className="truncate">
-                    {meeting.meetingType === 'online' ? 'Virtual Meeting' : (meeting.location || 'No location set')}
-                  </span>
+                {/* Middle: Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-x-3 gap-y-1 mb-1">
+                    <h3 className="text-[15px] font-bold text-gray-900 truncate tracking-tight">
+                      {meeting.title}
+                    </h3>
+                    <span className="hidden sm:inline w-1 h-1 rounded-full bg-gray-300"></span>
+                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
+                       {meeting.meetingType}
+                    </span>
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-gray-500">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <User size={14} className="text-gray-400" />
+                      <span className="text-gray-900">{meeting.organizer?.name || meeting.organizer?.email}</span>
+                    </span>
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <Calendar size={14} className="text-gray-400" />
+                      <span>{new Date(meeting.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at {meeting.time}</span>
+                    </span>
+                    {meeting.location && (
+                       <span className="flex items-center gap-1.5 truncate text-gray-400">
+                         <MapPin size={14} />
+                         <span className="truncate">{meeting.location}</span>
+                       </span>
+                    )}
+                  </div>
                 </div>
-                
-                {meeting.building && (
-                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                      <Building className="w-4 h-4 text-gray-400" />
-                      <span className="truncate">{meeting.building}</span>
-                    </div>
-                )}
-              </div>
 
-              <div className="flex gap-3 pt-4 border-t border-gray-100 pl-2">
-                <button
-                  onClick={() => handleRsvp(meeting._id, "accepted")}
-                  disabled={actionLoading === `${meeting._id}-accepted` || actionLoading === `${meeting._id}-declined`}
-                  className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center gap-2"
-                >
-                  {actionLoading === `${meeting._id}-accepted` ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <CheckCircle className="w-5 h-5" />
-                  )}
-                  Accept
-                </button>
-                <button
-                  onClick={() => handleRsvp(meeting._id, "declined")}
-                  disabled={actionLoading === `${meeting._id}-accepted` || actionLoading === `${meeting._id}-declined`}
-                  className="flex-1 px-4 py-2.5 bg-white border-2 border-red-100 text-red-600 hover:bg-red-50 hover:border-red-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center gap-2"
-                >
-                  {actionLoading === `${meeting._id}-declined` ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <XCircle className="w-5 h-5" />
-                  )}
-                  Reject
-                </button>
+                {/* Right: Actions */}
+                <div className="flex items-center gap-3 mt-4 md:mt-0 md:pl-6 md:border-l border-gray-100">
+                  <button
+                    onClick={() => handleRsvp(meeting._id, "accepted")}
+                    disabled={actionLoading === `${meeting._id}-accepted` || actionLoading === `${meeting._id}-declined`}
+                    className="flex-1 md:flex-none h-9 px-5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 font-bold text-xs"
+                  >
+                     {actionLoading === `${meeting._id}-accepted` ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      "Accept"
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={() => handleRsvp(meeting._id, "declined")}
+                    disabled={actionLoading === `${meeting._id}-accepted` || actionLoading === `${meeting._id}-declined`}
+                    className="flex-1 md:flex-none h-9 px-4 bg-white text-gray-500 border border-gray-200 rounded-lg hover:border-red-200 hover:text-red-600 hover:bg-red-50 transition-all active:scale-95 disabled:opacity-50 font-bold text-xs"
+                  >
+                    {actionLoading === `${meeting._id}-declined` ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      "Decline"
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
+      
+      {/* Footer Info */}
+      <div className="mt-12 text-center border-t border-gray-50 pt-8">
+        <p className="text-[10px] font-bold text-gray-300 uppercase tracking-[0.3em]">End of Notifications</p>
+      </div>
     </div>
   );
 }

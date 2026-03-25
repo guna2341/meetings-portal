@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, Users, Plus, Search, Filter, MoreVertical, MapPin, User, ChevronRight, Building, Loader2, AlertCircle, Link as LinkIcon, Trash2 } from 'lucide-react';
+import { Calendar, Clock, Users, Plus, Search, Filter, MoreVertical, MapPin, User, ChevronRight, Building, Loader2, AlertCircle, Link as LinkIcon, Trash2, Bell, CheckCircle, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface Meeting {
@@ -205,7 +205,6 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-600 mb-3 line-clamp-2">{meeting.description || 'No description provided.'}</p>
         </div>
         
-        {/* Render standalone Delete icon in the top right for hosted meetings */}
         {isHosted && (
           <button 
             onClick={() => setDeleteConfirmModalId(meeting._id)}
@@ -356,62 +355,82 @@ export default function DashboardPage() {
         </div>
 
         {data && data.pendingInvitations.length > 0 && (
-          <div className="mb-8 overflow-hidden">
-            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                <Users className="w-5 h-5 text-orange-600" />
+          <div className="mb-10">
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-100">
+               <h2 className="text-lg font-black text-gray-900 flex items-center gap-2 uppercase tracking-tight">
+                <Bell className="w-5 h-5 text-blue-600" />
+                New Invitations
+                <span className="ml-2 px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-black rounded-full">
+                  {data.pendingInvitations.length}
+                </span>
+              </h2>
+              <button 
+                onClick={() => router.push('/notifications')}
+                className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                View all
+              </button>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="divide-y divide-gray-100">
+                {data.pendingInvitations.map((invitation, index) => (
+                  <div 
+                    key={invitation._id} 
+                    className="group flex flex-col md:flex-row md:items-center gap-4 p-4 hover:bg-gray-50/50 transition-all cursor-pointer"
+                    onClick={() => router.push(`/dashboard/view/${invitation._id}`)}
+                  >
+                    <div className="hidden md:block w-1 h-8 bg-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-xs font-black text-gray-600 border border-gray-200">
+                        {invitation.organizer?.name?.[0] || 'U'}
+                      </div>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-x-3 gap-y-0.5 mb-1">
+                        <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                          {invitation.title}
+                        </h3>
+                        <span className="hidden sm:inline w-1 h-1 rounded-full bg-gray-200"></span>
+                        <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">
+                          {invitation.meetingType}
+                        </span>
+                      </div>
+                      
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 font-medium">
+                        <span className="flex items-center gap-1.5">
+                          <User size={12} className="text-gray-400" />
+                          <span className="text-gray-700 font-bold">{invitation.organizer.name || invitation.organizer.email}</span>
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <Calendar size={12} className="text-gray-400" />
+                          <span>{new Date(invitation.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} at {invitation.time}</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-3 md:mt-0 md:pl-4 md:border-l border-gray-100">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleRsvp(invitation._id, "accepted", true); }}
+                        disabled={actionLoading === `${invitation._id}-accepted` || actionLoading === `${invitation._id}-declined`}
+                        className="flex-1 md:flex-none h-9 px-4 bg-blue-600 text-white rounded-lg text-[11px] font-black hover:bg-blue-700 transition-all flex items-center justify-center gap-1.5"
+                      >
+                        {actionLoading === `${invitation._id}-accepted` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus size={14} />}
+                        Accept
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleRsvp(invitation._id, "declined", true); }}
+                        disabled={actionLoading === `${invitation._id}-accepted` || actionLoading === `${invitation._id}-declined`}
+                        className="flex-1 md:flex-none h-9 px-4 bg-white text-gray-400 border border-gray-200 rounded-lg text-[11px] font-bold hover:text-red-600 hover:bg-red-50 hover:border-red-100 transition-all flex items-center justify-center"
+                      >
+                         {actionLoading === `${invitation._id}-declined` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Decline"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              New Invitations
-              <span className="bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full ml-1 animate-pulse">
-                {data.pendingInvitations.length}
-              </span>
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {data.pendingInvitations.map((invitation) => (
-                <div 
-                  key={invitation._id} 
-                  className="bg-white rounded-2xl border-2 border-orange-100 hover:border-orange-200 p-5 shadow-sm hover:shadow-md transition-all group flex flex-col"
-                >
-                  <div className="flex justify-between items-start mb-3" onClick={() => router.push(`/dashboard/view/${invitation._id}`)}>
-                    <h3 className="font-bold text-gray-900 group-hover:text-orange-600 transition-colors truncate flex-1 pr-2 cursor-pointer">{invitation.title}</h3>
-                    <div className="flex items-center gap-1 text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-lg uppercase">
-                      Invited
-                    </div>
-                  </div>
-                  <div className="space-y-2 mb-4 flex-1" onClick={() => router.push(`/dashboard/view/${invitation._id}`)}>
-                    <div className="flex items-center gap-2 text-xs text-gray-600">
-                      <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                      {new Date(invitation.date).toLocaleDateString()}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-600">
-                      <Clock className="w-3.5 h-3.5 text-gray-400" />
-                      {invitation.time}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-600">
-                      <User className="w-3.5 h-3.5 text-gray-400" />
-                      <span className="truncate">By {invitation.organizer.name || invitation.organizer.email}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 pt-3 border-t border-orange-50 mt-auto">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleRsvp(invitation._id, "accepted", true); }}
-                      disabled={actionLoading === `${invitation._id}-accepted` || actionLoading === `${invitation._id}-declined`}
-                      className="flex-1 py-2 bg-orange-600 text-white rounded-xl text-xs font-bold hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center justify-center gap-1.5"
-                    >
-                      {actionLoading === `${invitation._id}-accepted` && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                      Accept
-                    </button>
-                    <button
-                       onClick={(e) => { e.stopPropagation(); handleRsvp(invitation._id, "declined", true); }}
-                       disabled={actionLoading === `${invitation._id}-accepted` || actionLoading === `${invitation._id}-declined`}
-                       className="flex-1 py-2 bg-orange-50 text-orange-700 border border-orange-200 rounded-xl text-xs font-bold hover:bg-orange-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm flex items-center justify-center gap-1.5"
-                    >
-                      {actionLoading === `${invitation._id}-declined` && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         )}
