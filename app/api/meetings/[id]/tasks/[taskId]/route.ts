@@ -39,9 +39,9 @@ export async function PATCH(
 
     const { id, taskId } = await params;
 
-    if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(taskId)) {
+    if (!mongoose.Types.ObjectId.isValid(taskId)) {
       return NextResponse.json(
-        { success: false, message: "Invalid meetingId or taskId" },
+        { success: false, message: "Invalid taskId" },
         { status: 400 }
       );
     }

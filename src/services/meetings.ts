@@ -10,6 +10,8 @@ export type CreateMeetingPayload = {
   duration?: string;      
   location?: string;
   building?: string;
+  meetingLink?: string;
+  meetingType?: 'online' | 'offline' | 'hybrid';
   status?: 'upcoming' | 'completed' | 'cancelled';
   organizer: {
     name: string;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, Users, MapPin, Building, ArrowLeft, CheckCircle, XCircle, User, Loader2, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, Users, MapPin, Building, ArrowLeft, CheckCircle, XCircle, User, Loader2, AlertCircle, Link as LinkIcon, Trash2 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 
 interface Attendee {
@@ -37,10 +37,13 @@ interface MeetingDetails {
   duration: string;
   location: string;
   building: string;
+  meetingLink?: string;
+  meetingType: 'online' | 'offline' | 'hybrid';
   status: 'upcoming' | 'completed' | 'cancelled';
   organizer: {
     name: string;
     email: string;
+    userId?: string;
   };
   attendees: Attendee[];
   tasks: Task[];
@@ -62,6 +65,8 @@ export default function MeetingViewPage() {
   const [overlapConflicts, setOverlapConflicts] = useState<any[]>([]);
   const [pendingRSVPStatus, setPendingRSVPStatus] = useState<'accepted' | 'declined' | null>(null);
   const [isCheckingOverlap, setIsCheckingOverlap] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     try {
@@ -141,6 +146,27 @@ export default function MeetingViewPage() {
       alert('Network error - failed to update RSVP');
     } finally {
       setIsUpdatingRSVP(false);
+    }
+  };
+
+  const handleDeleteMeeting = async () => {
+    try {
+      setIsDeleting(true);
+      const res = await fetch(`/api/meetings/${id}`, {
+        method: "DELETE",
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setShowDeleteModal(false);
+        router.push('/dashboard');
+      } else {
+        alert(json.message || "Failed to delete meeting");
+      }
+    } catch (err) {
+      alert("Network error - failed to delete meeting");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -230,6 +256,12 @@ export default function MeetingViewPage() {
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-2 flex-wrap">
               <h1 className="text-3xl font-bold text-gray-900">{meeting.title}</h1>
+              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                meeting.meetingType === 'online' ? 'bg-blue-600 text-white shadow-sm' :
+                meeting.meetingType === 'hybrid' ? 'bg-purple-600 text-white shadow-sm' : 'bg-gray-600 text-white shadow-sm'
+              }`}>
+                {meeting.meetingType}
+              </span>
               <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${getStatusColor(meeting.status)}`}>
                 {meeting.status}
               </span>
@@ -274,6 +306,30 @@ export default function MeetingViewPage() {
               </div>
             </div>
           )}
+
+          {/* Join Meeting Button for Online Meetings */}
+          {meeting.meetingLink && (meeting.status === 'upcoming' || meeting.status === 'completed') && (
+            <a
+              href={meeting.meetingLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-200 hover:shadow-xl hover:scale-[1.02] transition-all active:scale-95 shrink-0 self-center md:self-start"
+            >
+              <LinkIcon size={18} />
+              Join Meeting
+            </a>
+          )}
+
+          {/* Organizer Actions */}
+          {currentUser && (meeting.organizer.userId === currentUser.id || meeting.organizer.email === currentUser.email) && (
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-red-50 text-red-600 rounded-xl text-sm font-bold border border-red-200 hover:bg-red-100 hover:text-red-700 hover:scale-[1.02] transition-all active:scale-95 shrink-0 self-center md:self-start ml-auto"
+            >
+              <Trash2 size={18} />
+              Delete Meeting
+            </button>
+          )}
         </div>
 
         {/* Meeting Info Grid */}
@@ -305,7 +361,9 @@ export default function MeetingViewPage() {
             <MapPin className="w-5 h-5 text-green-600" />
             <div className="min-w-0">
               <p className="text-xs text-gray-500 mb-1 font-medium italic">Location</p>
-              <p className="text-sm font-semibold text-gray-900 truncate">{meeting.location || 'N/A'}</p>
+              <p className="text-sm font-semibold text-gray-900 truncate">
+                {meeting.meetingType === 'online' ? 'Online Meeting' : (meeting.location || 'N/A')}
+              </p>
             </div>
           </div>
 
@@ -313,7 +371,9 @@ export default function MeetingViewPage() {
             <Building className="w-5 h-5 text-orange-600" />
             <div className="min-w-0">
               <p className="text-xs text-gray-500 mb-1 font-medium italic">Building</p>
-              <p className="text-sm font-semibold text-gray-900 truncate">{meeting.building || 'N/A'}</p>
+              <p className="text-sm font-semibold text-gray-900 truncate">
+                {meeting.meetingType === 'online' ? 'Virtual' : (meeting.building || 'N/A')}
+              </p>
             </div>
           </div>
         </div>
@@ -583,6 +643,41 @@ export default function MeetingViewPage() {
               <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest leading-loose">
                 Pro Tip: You can still accept if you plan to attend part of both meetings!
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Organizer Delete Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+          <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={() => !isDeleting && setShowDeleteModal(false)} />
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm relative z-10 overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 ring-8 ring-red-50">
+                <Trash2 className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Delete Meeting?</h2>
+              <p className="text-gray-600 mb-6 text-sm">
+                Are you sure you want to permanently delete this meeting? This action cannot be undone and will remove it from all attendees' schedules.
+              </p>
+
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={handleDeleteMeeting}
+                  disabled={isDeleting}
+                  className="w-full py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-all shadow-md shadow-red-200 active:scale-95 flex items-center justify-center gap-2"
+                >
+                  {isDeleting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Yes, Delete Meeting"}
+                </button>
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={isDeleting}
+                  className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-all active:scale-95"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>

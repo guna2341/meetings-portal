@@ -49,12 +49,31 @@ const CreateMeetingSchema = z.object({
   duration: z.string().default("60 min"),
   location: z.string().optional(),
   building: z.string().optional(),
+  meetingLink: z.string().optional().or(z.literal("")),
+  meetingType: z.enum(["online", "offline", "hybrid"]).default("offline"),
   status: z.enum(["upcoming", "completed", "cancelled"]).default("upcoming"),
   // organizer is derived from JWT — not trusted from body
   attendees: z.array(AttendeeSchema).default([]),
   agenda: z.array(z.string()).default([]),
   tasks: z.array(TaskSchema).default([]),
   notes: z.array(NoteSchema).default([]),
+}).superRefine((data, ctx) => {
+  if (data.meetingType === 'offline' && !data.location) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Location is required for offline meetings",
+      path: ["location"],
+    });
+  }
+  if (data.meetingType === 'hybrid') {
+    if (!data.location) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Location is required for hybrid meetings",
+        path: ["location"],
+      });
+    }
+  }
 });
 
 // ─── POST /api/meetings — Create a meeting ─────────────────────────────────
@@ -90,6 +109,7 @@ export async function POST(req: NextRequest) {
     const meeting = await Meeting.create({
       ...data,
       date: new Date(data.date),
+      meetingLink: data.meetingLink || undefined,
 
       // ── Build organizer from the verified JWT so ID is always present ──
       organizer: {

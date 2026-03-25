@@ -39,6 +39,8 @@ export interface IMeeting extends Document {
   duration: string;
   location?: string;
   building?: string;
+  meetingLink?: string;
+  meetingType: 'online' | 'offline' | 'hybrid';
   status: 'upcoming' | 'completed' | 'cancelled';
   organizer: IOrganizer;
   attendees: IAttendee[];
@@ -193,6 +195,18 @@ const MeetingSchema = new Schema<IMeeting>(
     building: {
       type: String,
       trim: true,
+    },
+    meetingLink: {
+      type: String,
+      trim: true,
+    },
+    meetingType: {
+      type: String,
+      enum: {
+        values: ['online', 'offline', 'hybrid'],
+        message: 'Type must be online, offline, or hybrid',
+      },
+      default: 'offline',
     },
     status: {
       type: String,

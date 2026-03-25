@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { Search, Bell, ChevronDown, Calendar, Clock, User, Settings, HelpCircle, LogOut, Menu } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface Notification {
   id: number;
@@ -22,6 +23,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const router = useRouter();
 
   const notifications: Notification[] = [
     {
@@ -86,21 +88,6 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
               </div>
             </div>
           </div>
-
-          {/* Center Section - Search Bar (hidden on mobile) */}
-          <div className="hidden md:flex flex-1 max-w-md mx-4">
-            <div className="relative w-full">
-              <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search meetings, tasks, people..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
-            </div>
-          </div>
-
           {/* Right Section - Actions & User Menu */}
           <div className="flex items-center gap-2 sm:gap-3">
             {/* <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg">
@@ -218,19 +205,24 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
 
                     {/* Menu Items */}
                     <div className="p-2">
-                      <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-left">
+                      <button 
+                        onClick={() => router.push('/profile')}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                      >
                         <User className="w-4 h-4 text-gray-500" />
                         <span className="text-sm text-gray-700">My Profile</span>
                       </button>
-                      <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-left">
+                      <button 
+                        onClick={() => router.push('/calendar')}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                      >
                         <Calendar className="w-4 h-4 text-gray-500" />
                         <span className="text-sm text-gray-700">My Calendar</span>
                       </button>
-                      <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-left">
-                        <Settings className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-700">Settings</span>
-                      </button>
-                      <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-left">
+                      <button 
+                         onClick={() => router.push('/support')}
+                         className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                      >
                         <HelpCircle className="w-4 h-4 text-gray-500" />
                         <span className="text-sm text-gray-700">Help & Support</span>
                       </button>

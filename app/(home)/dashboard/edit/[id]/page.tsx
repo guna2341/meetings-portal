@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import {
   Calendar, Clock, Users, MapPin, Building, ArrowLeft,
   Plus, Trash2, Save, X, GripVertical, ChevronDown,
-  CheckCircle, XCircle, User, Loader2, AlertCircle
+  CheckCircle, XCircle, User, Loader2, AlertCircle, Link as LinkIcon
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 
@@ -40,6 +40,8 @@ interface MeetingDetails {
   duration: string;
   location: string;
   building: string;
+  meetingLink?: string;
+  meetingType: 'online' | 'offline' | 'hybrid';
   status: 'upcoming' | 'completed' | 'cancelled';
   organizer: { name: string; email: string; userId?: string };
   attendees: Attendee[];
@@ -284,6 +286,31 @@ export default function MeetingEditPage() {
           {/* ── LEFT / main content ── */}
           <div className="lg:col-span-2 flex flex-col gap-6">
 
+            {/* Meeting Type */}
+            <SectionCard title="Meeting Type">
+              <div className="flex p-1 bg-gray-100 rounded-xl">
+                {[
+                  { id: 'offline' as const, label: 'Offline', icon: MapPin },
+                  { id: 'online' as const, label: 'Online', icon: LinkIcon },
+                  { id: 'hybrid' as const, label: 'Hybrid', icon: Users },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => updateField('meetingType', t.id)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                      meeting.meetingType === t.id
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    <t.icon size={16} />
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </SectionCard>
+
             {/* Basic Info */}
             <SectionCard title="Basic Information">
               <div className="grid grid-cols-1 gap-4">
@@ -346,22 +373,40 @@ export default function MeetingEditPage() {
                 </div>
 
                 {/* Location / Building */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className={labelCls}>
-                      <span className="flex items-center gap-1"><MapPin size={11} /> Location</span>
-                    </label>
-                    <input className={inputCls} value={meeting.location}
-                      onChange={(e) => updateField('location', e.target.value)} placeholder="Conference Room" />
+                {(meeting.meetingType === 'offline' || meeting.meetingType === 'hybrid') && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div>
+                      <label className={labelCls}>
+                        <span className="flex items-center gap-1"><MapPin size={11} /> Location <span className="text-red-400">*</span></span>
+                      </label>
+                      <input className={inputCls} value={meeting.location}
+                        onChange={(e) => updateField('location', e.target.value)} placeholder="Conference Room" />
+                    </div>
+                    <div>
+                      <label className={labelCls}>
+                        <span className="flex items-center gap-1"><Building size={11} /> Floor</span>
+                      </label>
+                      <input className={inputCls} value={meeting.building}
+                        onChange={(e) => updateField('building', e.target.value)} placeholder="Main Office - Floor" />
+                    </div>
                   </div>
-                  <div>
+                )}
+
+                {/* Meeting Link */}
+                {(meeting.meetingType === 'online' || meeting.meetingType === 'hybrid') && (
+                  <div className="pt-2 border-t border-gray-100 animate-in fade-in slide-in-from-top-2 duration-300">
                     <label className={labelCls}>
-                      <span className="flex items-center gap-1"><Building size={11} /> Building</span>
+                      <span className="flex items-center gap-1"><LinkIcon size={11} /> Meeting Link <span className="text-red-400">*</span></span>
                     </label>
-                    <input className={inputCls} value={meeting.building}
-                      onChange={(e) => updateField('building', e.target.value)} placeholder="Main Office - Floor" />
+                    <input
+                      className={inputCls}
+                      value={meeting.meetingLink || ''}
+                      onChange={(e) => updateField('meetingLink', e.target.value)}
+                      placeholder="https://zoom.us/j/..."
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1 italic">Providing a link will enable a &quot;Join Meeting&quot; button for attendees.</p>
                   </div>
-                </div>
+                )}
 
                 {/* Organizer */}
                 <div className="pt-2 border-t border-gray-100">
@@ -534,22 +579,57 @@ export default function MeetingEditPage() {
           <div className="flex flex-col gap-6">
 
             {/* Attendees */}
-            <SectionCard title={`Attendees (${meeting.attendees.length})`}>
-              {/* Status summary */}
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                <div className="text-center p-2 bg-green-50 rounded-xl border border-green-100/50">
-                  <p className="text-lg font-black text-green-700">{acceptedCount}</p>
-                  <p className="text-[9px] text-green-500 font-bold uppercase tracking-tight">Accepted</p>
+            <SectionCard title={`Attendee Statistics`}>
+              {/* Status summary - Professional Sticker Style */}
+              <div className="flex flex-col gap-3 mb-2">
+                <div className="flex items-center justify-between p-3.5 bg-gradient-to-br from-emerald-50 to-green-50 rounded-2xl border border-emerald-100 shadow-sm transition-all hover:shadow-md group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-emerald-200 shadow-lg group-hover:scale-110 transition-transform">
+                      <CheckCircle size={20} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Accepted</p>
+                      <p className="text-xl font-black text-gray-900 leading-none mt-1">{acceptedCount}</p>
+                    </div>
+                  </div>
+                  <div className="text-[10px] font-bold text-emerald-600/50 bg-emerald-100/50 px-2 py-1 rounded-lg">
+                    {Math.round((acceptedCount / (meeting.attendees.length || 1)) * 100)}%
+                  </div>
                 </div>
-                <div className="text-center p-2 bg-yellow-50 rounded-xl border border-yellow-100/50">
-                  <p className="text-lg font-black text-yellow-700">{pendingCount}</p>
-                  <p className="text-[9px] text-yellow-500 font-bold uppercase tracking-tight">Pending</p>
+
+                <div className="flex items-center justify-between p-3.5 bg-gradient-to-br from-amber-50 to-yellow-50 rounded-2xl border border-amber-100 shadow-sm transition-all hover:shadow-md group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-white shadow-amber-200 shadow-lg group-hover:scale-110 transition-transform">
+                      <Clock size={20} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Pending</p>
+                      <p className="text-xl font-black text-gray-900 leading-none mt-1">{pendingCount}</p>
+                    </div>
+                  </div>
+                  <div className="text-[10px] font-bold text-amber-600/50 bg-amber-100/50 px-2 py-1 rounded-lg">
+                    {Math.round((pendingCount / (meeting.attendees.length || 1)) * 100)}%
+                  </div>
                 </div>
-                <div className="text-center p-2 bg-red-50 rounded-xl border border-red-100/50">
-                  <p className="text-lg font-black text-red-700">{declinedCount}</p>
-                  <p className="text-[9px] text-red-500 font-bold uppercase tracking-tight">Declined</p>
+
+                <div className="flex items-center justify-between p-3.5 bg-gradient-to-br from-rose-50 to-red-50 rounded-2xl border border-rose-100 shadow-sm transition-all hover:shadow-md group">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-rose-500 rounded-xl flex items-center justify-center text-white shadow-rose-200 shadow-lg group-hover:scale-110 transition-transform">
+                      <XCircle size={20} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-rose-600 uppercase tracking-widest">Declined</p>
+                      <p className="text-xl font-black text-gray-900 leading-none mt-1">{declinedCount}</p>
+                    </div>
+                  </div>
+                  <div className="text-[10px] font-bold text-rose-600/50 bg-rose-100/50 px-2 py-1 rounded-lg">
+                    {Math.round((declinedCount / (meeting.attendees.length || 1)) * 100)}%
+                  </div>
                 </div>
               </div>
+            </SectionCard>
+
+            <SectionCard title={`Attendee List (${meeting.attendees.length})`}>
 
               <div className="flex flex-col gap-3">
                 {meeting.attendees.map((attendee) => (
@@ -584,17 +664,30 @@ export default function MeetingEditPage() {
                         onChange={(e) => updateAttendee(attendee._id, 'email', e.target.value)}
                         placeholder="Email address"
                       />
-                      <div className="relative">
-                        <select
-                          className={`${inputCls} appearance-none pr-7`}
-                          value={attendee.status}
-                          onChange={(e) => updateAttendee(attendee._id, 'status', e.target.value as any)}
-                        >
-                          <option value="pending">Pending</option>
-                          <option value="accepted">Accepted</option>
-                          <option value="declined">Declined</option>
-                        </select>
-                        <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      <div className="flex bg-gray-100 p-0.5 rounded-xl h-8">
+                        {[
+                          { id: 'pending' as const, icon: Clock, active: 'bg-white text-amber-600 shadow-sm' },
+                          { id: 'accepted' as const, icon: CheckCircle, active: 'bg-white text-emerald-600 shadow-sm' },
+                          { id: 'declined' as const, icon: XCircle, active: 'bg-white text-rose-600 shadow-sm' },
+                        ].map((s) => {
+                          const isSelected = attendee.status === s.id;
+                          return (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => {
+                                // Manual update logic for better UX
+                                updateAttendee(attendee._id, 'status', s.id);
+                              }}
+                              className={`flex-1 flex items-center justify-center gap-1 rounded-lg text-[9px] font-black transition-all ${
+                                isSelected ? s.active : `text-gray-400 hover:text-gray-600`
+                              }`}
+                            >
+                              <s.icon size={11} className={isSelected ? '' : 'opacity-40'} />
+                              <span className="uppercase tracking-tighter">{s.id}</span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -638,6 +731,27 @@ export default function MeetingEditPage() {
           </div>
         </div>
       </div>
+
+      {/* Professional Toast Notification */}
+      {saved && (
+        <div className="fixed bottom-8 right-8 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-500">
+          <div className="bg-white/80 backdrop-blur-xl border border-emerald-100 rounded-3xl p-5 shadow-2xl flex items-center gap-5 min-w-[320px] ring-1 ring-emerald-50">
+            <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-200 shrink-0">
+              <CheckCircle size={24} />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-black text-gray-900">Changes Saved!</p>
+              <p className="text-xs text-emerald-600 font-medium tracking-tight">Meeting details updated successfully</p>
+            </div>
+            <button
+              onClick={() => setSaved(false)}
+              className="w-8 h-8 flex items-center justify-center rounded-xl bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

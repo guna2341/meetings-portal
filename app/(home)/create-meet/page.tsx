@@ -5,7 +5,7 @@ import {
   ArrowLeft, Calendar, Clock, MapPin, Building, Users,
   Plus, Trash2, ChevronDown, GripVertical, Save,
   CheckCircle, User, FileText, ListTodo, StickyNote, X,
-  Loader2, AlertCircle, Search
+  Loader2, AlertCircle, Search, Link as LinkIcon
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createMeeting } from '@/src/services/meetings';
@@ -42,6 +42,8 @@ interface MeetingForm {
   duration: string;
   location: string;
   building: string;
+  meetingLink: string;
+  meetingType: 'online' | 'offline' | 'hybrid';
   status: 'upcoming' | 'completed' | 'cancelled';
   organizer: { name: string; email: string };
   attendees: Attendee[];
@@ -77,6 +79,8 @@ const defaultForm: MeetingForm = {
   duration: '60 min',
   location: '',
   building: '',
+  meetingLink: '',
+  meetingType: 'offline',
   status: 'upcoming',
   organizer: { name: '', email: '' },
   attendees: [],
@@ -435,7 +439,26 @@ export default function CreateMeetingPage() {
   const [form, setForm] = useState<MeetingForm>(defaultForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [createdId, setCreatedId] = useState<string | null>(null);
+
+  const fieldToStep: Record<string, number> = {
+    title: 1, description: 1, date: 1, time: 1, duration: 1, location: 1, building: 1, meetingLink: 1, meetingType: 1, status: 1, organizer: 1,
+    agenda: 2,
+    attendees: 3,
+    tasks: 4, notes: 4,
+  };
+
+  const FieldError = ({ name }: { name: string }) => {
+    const errors = fieldErrors[name];
+    if (!errors?.length) return null;
+    return (
+      <div className="flex items-center gap-1.5 mt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+        <AlertCircle size={10} className="text-red-500" />
+        <p className="text-[10px] font-bold text-red-500 leading-none">{errors[0]}</p>
+      </div>
+    );
+  };
 
   // ── Lock organizer to the logged-in user from localStorage ────────────
   useEffect(() => {
@@ -505,7 +528,13 @@ export default function CreateMeetingPage() {
   // ── Validation ─────────────────────────────────────────────────────────
 
   const stepValid = (step: number) => {
-    if (step === 1) return form.title.trim() !== '' && form.date !== '' && form.time.trim() !== '';
+    if (step === 1) {
+      const basic = form.title.trim() !== '' && form.date !== '' && form.time.trim() !== '';
+      if (!basic) return false;
+      if (form.meetingType === 'offline') return form.location.trim() !== '';
+      if (form.meetingType === 'hybrid') return form.location.trim() !== '';
+      return true;
+    }
     if (step === 2) return form.agenda.some((a) => a.trim() !== '');
     return true;
   };
@@ -522,8 +551,10 @@ export default function CreateMeetingPage() {
         date: form.date,
         time: form.time,
         duration: form.duration,
-        location: form.location || undefined,
-        building: form.building || undefined,
+        location: form.meetingType === 'online' ? undefined : (form.location || undefined),
+        building: form.meetingType === 'online' ? undefined : (form.building || undefined),
+        meetingLink: form.meetingType === 'offline' ? undefined : (form.meetingLink || undefined),
+        meetingType: form.meetingType,
         status: form.status,
         organizer: form.organizer,
         attendees: form.attendees.map(({ name, email, userId }) => ({ name, email, userId, status: 'pending' as const })),
@@ -545,7 +576,15 @@ export default function CreateMeetingPage() {
       if (result.success) {
         setCreatedId((result.data as { _id: any })._id);
       } else {
-        setSubmitError(result.message ?? 'Something went wrong. Please try again.');
+        const errorResult = result as { success: false; message: string; errors?: Record<string, string[]> };
+        setSubmitError(errorResult.message ?? 'Something went wrong. Please try again.');
+        if (errorResult.errors) {
+          setFieldErrors(errorResult.errors);
+          // Find the first step with an error
+          const firstErrorField = Object.keys(errorResult.errors)[0];
+          const targetStep = fieldToStep[firstErrorField];
+          if (targetStep) setCurrentStep(targetStep);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -691,34 +730,66 @@ export default function CreateMeetingPage() {
         {/* ── Step 1: Details ── */}
         {currentStep === 1 && (
           <div className="flex flex-col gap-5">
+            <SectionCard title="Meeting Type" subtitle="Select how the meeting will be conducted">
+              <div className="flex p-1 bg-gray-100 rounded-xl">
+                {[
+                  { id: 'offline' as const, label: 'Offline', icon: MapPin },
+                  { id: 'online' as const, label: 'Online', icon: LinkIcon },
+                  { id: 'hybrid' as const, label: 'Hybrid', icon: Users },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => updateField('meetingType', t.id)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${
+                      form.meetingType === t.id
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    <t.icon size={16} />
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-400 mt-3 italic text-center">
+                {form.meetingType === 'online' && 'Require a meeting link. No physical location needed.'}
+                {form.meetingType === 'offline' && 'Require a physical location. No online link needed.'}
+                {form.meetingType === 'hybrid' && 'Require both a physical location and an online meeting link.'}
+              </p>
+            </SectionCard>
+
             <SectionCard title="Meeting Details" subtitle="Basic information about the meeting">
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className={labelCls}>Meeting Title <span className="text-red-400">*</span></label>
                   <input
-                    className={inputCls}
+                    className={`${inputCls} ${fieldErrors.title ? 'border-red-300 ring-red-50 focus:ring-red-200 focus:border-red-400' : ''}`}
                     value={form.title}
                     onChange={(e) => updateField('title', e.target.value)}
                     placeholder="e.g. Q2 Planning Review"
                   />
+                  <FieldError name="title" />
                 </div>
                 <div>
                   <label className={labelCls}>Description</label>
                   <textarea
-                    className={`${inputCls} resize-none`}
+                    className={`${inputCls} resize-none ${fieldErrors.description ? 'border-red-300 ring-red-50 focus:ring-red-200 focus:border-red-400' : ''}`}
                     rows={3}
                     value={form.description}
                     onChange={(e) => updateField('description', e.target.value)}
                     placeholder="What is this meeting about?"
                   />
+                  <FieldError name="description" />
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="col-span-2 sm:col-span-1">
                     <label className={labelCls}>
                       <span className="flex items-center gap-1"><Calendar size={11} /> Date <span className="text-red-400">*</span></span>
                     </label>
-                    <input type="date" className={inputCls} value={form.date}
+                    <input type="date" className={`${inputCls} ${fieldErrors.date ? 'border-red-300 ring-red-50 focus:ring-red-200 focus:border-red-400' : ''}`} value={form.date}
                       onChange={(e) => updateField('date', e.target.value)} />
+                    <FieldError name="date" />
                   </div>
                   <div className="col-span-2 sm:col-span-1">
                     <label className={labelCls}>
@@ -787,18 +858,31 @@ export default function CreateMeetingPage() {
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className={labelCls}><span className="flex items-center gap-1"><MapPin size={11} /> Location</span></label>
-                    <input className={inputCls} value={form.location}
+                {(form.meetingType === 'offline' || form.meetingType === 'hybrid') && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div>
+                      <label className={labelCls}><span className="flex items-center gap-1"><MapPin size={11} /> Location</span></label>
+                      <input className={`${inputCls} ${fieldErrors.location ? 'border-red-300 ring-red-50 focus:ring-red-200 focus:border-red-400' : ''}`} value={form.location}
                       onChange={(e) => updateField('location', e.target.value)} placeholder="Conference Room A" />
+                    <FieldError name="location" />
+                    </div>
+                    <div>
+                      <label className={labelCls}><span className="flex items-center gap-1"><MapPin size={11} /> Floor</span></label>
+                      <input className={inputCls} value={form.building}
+                        onChange={(e) => updateField('building', e.target.value)} placeholder="Main Office - 3rd Floor" />
+                    </div>
                   </div>
-                  <div>
-                    <label className={labelCls}><span className="flex items-center gap-1"><Building size={11} /> Building</span></label>
-                    <input className={inputCls} value={form.building}
-                      onChange={(e) => updateField('building', e.target.value)} placeholder="Main Office - 3rd Floor" />
+                )}
+                
+                {(form.meetingType === 'online' || form.meetingType === 'hybrid') && (
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <label className={labelCls}><span className="flex items-center gap-1"><LinkIcon size={11} /> Meeting Link</span></label>
+                    <input className={`${inputCls} ${fieldErrors.meetingLink ? 'border-red-300 ring-red-50 focus:ring-red-200 focus:border-red-400' : ''}`} value={form.meetingLink}
+                      onChange={(e) => updateField('meetingLink', e.target.value)} placeholder="https://zoom.us/j/..." />
+                    <FieldError name="meetingLink" />
+                    <p className="text-[10px] text-gray-400 mt-1 italic">Providing a link will enable a &quot;Join Meeting&quot; button for attendees.</p>
                   </div>
-                </div>
+                )}
               </div>
             </SectionCard>
 
@@ -858,6 +942,7 @@ export default function CreateMeetingPage() {
               >
                 <Plus size={15} /> Add Agenda Item
               </button>
+              <FieldError name="agenda" />
             </div>
           </SectionCard>
         )}
@@ -903,6 +988,7 @@ export default function CreateMeetingPage() {
                   ))}
                 </div>
               )}
+              <FieldError name="attendees" />
             </div>
           </SectionCard>
         )}
@@ -999,6 +1085,7 @@ export default function CreateMeetingPage() {
                   >
                     <Plus size={15} /> Add Task
                   </button>
+                  <FieldError name="tasks" />
                 </div>
               )}
             </SectionCard>
@@ -1011,6 +1098,7 @@ export default function CreateMeetingPage() {
                 onChange={(e) => updateField('notes', e.target.value)}
                 placeholder="e.g. Please review the attached budget document before joining."
               />
+              <FieldError name="notes" />
             </SectionCard>
 
             {/* Review summary */}

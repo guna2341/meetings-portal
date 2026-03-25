@@ -2,23 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/src/lib/db";
 import Meeting from "@/src/models/meeting";
 import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET as string;
+
+function getUserFromRequest(req: NextRequest): { id: string; email: string; name?: string } | null {
+  try {
+    const token = req.cookies.get("token")?.value;
+    if (!token) return null;
+    return jwt.verify(token, JWT_SECRET) as { id: string; email: string; name?: string };
+  } catch {
+    return null;
+  }
+}
 
 type Params = { params: Promise<{ id: string }> };
 
-function isValidObjectId(id: string) {
-  return mongoose.Types.ObjectId.isValid(id);
-}
+
 
 // ─── GET /api/meetings/[id] ────────────────────────────────────────────────
 
 export async function GET(_req: NextRequest, { params }: Params) {
   const { id } = await params;
-  if (!isValidObjectId(id)) {
-    return NextResponse.json(
-      { success: false, message: "Invalid meeting ID" },
-      { status: 400 }
-    );
-  }
 
   try {
     await db;
@@ -46,12 +51,6 @@ export async function GET(_req: NextRequest, { params }: Params) {
 
 export async function PUT(req: NextRequest, { params }: Params) {
   const { id } = await params;
-  if (!isValidObjectId(id)) {
-    return NextResponse.json(
-      { success: false, message: "Invalid meeting ID" },
-      { status: 400 }
-    );
-  }
 
   try {
     await db;
@@ -104,19 +103,21 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
 // ─── DELETE /api/meetings/[id] ─────────────────────────────────────────────
 
-export async function DELETE(_req: NextRequest, { params }: Params) {
+export async function DELETE(req: NextRequest, { params }: Params) {
   const { id } = await params;
-  if (!isValidObjectId(id)) {
-    return NextResponse.json(
-      { success: false, message: "Invalid meeting ID" },
-      { status: 400 }
-    );
-  }
 
   try {
     await db;
 
-    const meeting = await Meeting.findByIdAndDelete(id);
+    const user = getUserFromRequest(req);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const meeting = await Meeting.findById(id);
 
     if (!meeting) {
       return NextResponse.json(
@@ -124,6 +125,18 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
         { status: 404 }
       );
     }
+    
+    // Check if user is organizer
+    const isOrganizer = meeting.organizer?.userId === user.id || meeting.organizer?.email === user.email;
+    
+    if (!isOrganizer) {
+      return NextResponse.json(
+        { success: false, message: "Only the meeting organizer can delete this meeting" },
+        { status: 403 }
+      );
+    }
+
+    await Meeting.findByIdAndDelete(id);
 
     return NextResponse.json({
       success: true,

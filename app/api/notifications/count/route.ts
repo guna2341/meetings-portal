@@ -24,16 +24,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
 
-    const pendingCount = await Meeting.countDocuments({
+    const pendingInvitations = await Meeting.find({
       $or: [
         { "attendees": { $elemMatch: { userId: user.id, status: "pending" } } },
         { "attendees": { $elemMatch: { email: user.email, status: "pending" } } }
       ]
-    });
+    }).sort({ date: 1, time: 1 }).lean();
 
     return NextResponse.json({
       success: true,
-      pendingCount
+      pendingCount: pendingInvitations.length,
+      pendingInvitations
     });
 
   } catch (error) {
