@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/src/lib/db";
 import Meeting from "@/src/models/meeting";
+import Conversation from "@/src/models/Conversation";
+import { User } from "@/src/models/User";
 import { z } from "zod";
 import jwt from "jsonwebtoken";
 
@@ -134,6 +136,24 @@ export async function POST(req: NextRequest) {
         timestamp: n.timestamp ? new Date(n.timestamp) : new Date(),
       })),
     });
+
+    // ── Create Automatic Group Chat ──────────────────────────────────────
+    try {
+      // Find all attendee user IDs (only for those already registered)
+      const attendeeEmails = data.attendees.map(a => a.email);
+      const attendeeUsers = await User.find({ email: { $in: attendeeEmails } }, '_id');
+      const attendeeIds = attendeeUsers.map(u => u._id);
+
+      // Create the group conversation
+      await Conversation.create({
+        type: 'group',
+        meetingId: meeting._id,
+        participants: [user.id, ...attendeeIds],
+      });
+    } catch (chatError) {
+      console.error("[POST /api/meetings] Chat creation failed:", chatError);
+      // We don't fail the meeting creation if chat fails
+    }
 
     return NextResponse.json(
       {

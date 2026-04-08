@@ -313,7 +313,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="h-full overflow-y-auto bg-gradient-to-br from-blue-50 via-white to-purple-50 custom-scroll">
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Stats Cards */}

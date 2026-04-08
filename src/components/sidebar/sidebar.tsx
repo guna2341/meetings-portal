@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Plus, History, CheckSquare, Users, Settings, Bell, LogOut, ChevronRight, LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Plus, History, CheckSquare, Users, Settings, Bell, LogOut, ChevronRight, MessageSquare, Building2, LucideIcon } from 'lucide-react';
 
 interface NavigationItem {
   id: string;
@@ -52,6 +52,13 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
       route: '/create-meet'
     },
     { 
+      id: 'chat', 
+      label: 'Messages', 
+      icon: MessageSquare,
+      description: 'Chat with participants',
+      route: '/chat'
+    },
+    { 
       id: 'history', 
       label: 'Meeting History', 
       icon: History,
@@ -72,6 +79,13 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
       description: 'Tasks for others',
       route: '/assigned-tasks'
     },
+    {
+      id: 'organizations',
+      label: 'Organizations',
+      icon: Building2,
+      description: 'Manage your orgs',
+      route: '/organizations'
+    },
   ];
 
   const handleNavigation = (route: string) => {
@@ -81,9 +95,14 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
     }
   };
 
-  function handleLogout() {
-    router.replace("/login");
-    localStorage.clear();
+  async function handleLogout() {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      localStorage.clear();
+      router.replace("/login");
+    } catch (err) {
+      console.error("Logout failed", err);
+    }
   }
 
   return (

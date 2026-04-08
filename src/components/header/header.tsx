@@ -1,8 +1,9 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Bell, ChevronDown, Calendar, Clock, User, Settings, HelpCircle, LogOut, Menu } from 'lucide-react';
+import OrgSwitcher from '@/src/components/org-switcher/OrgSwitcher';
 import { useRouter } from 'next/navigation';
 
 interface Notification {
@@ -60,9 +61,13 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
     }
   ];
 
-  let user = null;
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
-  if (typeof window !== "undefined") {
+  let user = null;
+  if (typeof window !== "undefined" && isMounted) {
     const data = localStorage.getItem("data");
     user = data ? JSON.parse(data) : null;
   }
@@ -90,6 +95,10 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
           </div>
           {/* Right Section - Actions & User Menu */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Org Switcher */}
+            <div className="hidden sm:block">
+              <OrgSwitcher />
+            </div>
             {/* <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg">
               <Calendar className="w-4 h-4 text-gray-500" />
               <span className="text-sm text-gray-700 font-medium">
@@ -229,7 +238,18 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
                     </div>
 
                     <div className="p-2 border-t border-gray-200">
-                      <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-50 transition-colors text-left text-red-600">
+                      <button 
+                        onClick={async () => {
+                          try {
+                            await fetch('/api/auth/logout', { method: 'POST' });
+                            localStorage.clear();
+                            router.replace('/login');
+                          } catch (err) {
+                            console.error("Logout failed", err);
+                          }
+                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-red-50 transition-colors text-left text-red-600"
+                      >
                         <LogOut className="w-4 h-4" />
                         <span className="text-sm font-medium">Logout</span>
                       </button>

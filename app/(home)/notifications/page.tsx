@@ -106,7 +106,7 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-12">
+    <div className="h-full overflow-y-auto max-w-6xl mx-auto px-6 py-12 custom-scroll">
       {/* Header Section */}
       <div className="flex items-center justify-between mb-10 pb-4 border-b-2 border-gray-100">
         <h1 className="text-2xl font-black text-gray-900 flex items-center gap-3">
