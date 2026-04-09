@@ -29,7 +29,16 @@ export interface InvitationEmailPayload {
   expiresAt: Date;      // expiry time
 }
 
-// ─── HTML Template ────────────────────────────────────────────────────────────
+export interface MeetingReminderEmailPayload {
+  to: string;
+  meetingTitle: string;
+  meetingTime: string;
+  meetingDate: string;
+  meetingLink?: string;
+  organizerName: string;
+}
+
+// ─── HTML Templates ────────────────────────────────────────────────────────────
 
 function buildInvitationEmail(payload: InvitationEmailPayload): string {
   const { inviteUrl, orgName, role, invitedByName, expiresAt } = payload;
@@ -87,9 +96,9 @@ function buildInvitationEmail(payload: InvitationEmailPayload): string {
                 <tr>
                   <td align="center">
                     <div style="width:64px;height:64px;border-radius:16px;
-                                background:linear-gradient(135deg,#4f46e5,#7c3aed);
-                                display:inline-block;text-align:center;line-height:64px;
-                                font-size:28px;font-weight:700;color:#fff;">
+                                 background:linear-gradient(135deg,#4f46e5,#7c3aed);
+                                 display:inline-block;text-align:center;line-height:64px;
+                                 font-size:28px;font-weight:700;color:#fff;">
                       ${orgName[0].toUpperCase()}
                     </div>
                     <h1 style="margin:16px 0 8px;font-size:24px;font-weight:700;color:#0f172a;">
@@ -145,9 +154,9 @@ function buildInvitationEmail(payload: InvitationEmailPayload): string {
                   <td align="center">
                     <a href="${inviteUrl}"
                       style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);
-                              color:#ffffff;font-size:15px;font-weight:600;padding:14px 40px;
-                              border-radius:12px;text-decoration:none;letter-spacing:0.2px;
-                              box-shadow:0 4px 14px rgba(79,70,229,0.4);">
+                               color:#ffffff;font-size:15px;font-weight:600;padding:14px 40px;
+                               border-radius:12px;text-decoration:none;letter-spacing:0.2px;
+                               box-shadow:0 4px 14px rgba(79,70,229,0.4);">
                       Accept Invitation →
                     </a>
                   </td>
@@ -207,11 +216,128 @@ function buildInvitationEmail(payload: InvitationEmailPayload): string {
 </html>`;
 }
 
+function buildReminderEmail(payload: MeetingReminderEmailPayload): string {
+  const { meetingTitle, meetingTime, meetingDate, meetingLink, organizerName } = payload;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Meeting Starting: ${meetingTitle}</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0"
+          style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+          <!-- Header alert bar -->
+          <tr>
+            <td style="background:#ef4444;padding:12px;text-align:center;color:#ffffff;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;">
+              Meeting starts in 1 minute
+            </td>
+          </tr>
+
+          <!-- Logo / App name -->
+          <tr>
+            <td align="center" style="padding:32px 40px 20px;">
+              <table cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background:linear-gradient(135deg,#ef4444,#f97316);border-radius:10px;
+                              width:36px;height:36px;text-align:center;vertical-align:middle;">
+                    <span style="color:#fff;font-size:18px;font-weight:700;line-height:36px;">M</span>
+                  </td>
+                  <td style="padding-left:10px;vertical-align:middle;">
+                    <span style="font-size:18px;font-weight:700;color:#0f172a;">MeetHub reminder</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:0 40px 40px;">
+              <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;text-align:center;">
+                ${meetingTitle}
+              </h1>
+              <p style="margin:0 0 28px;font-size:15px;color:#64748b;text-align:center;">
+                Your meeting with <strong>${organizerName}</strong> is starting soon.
+              </p>
+
+              <!-- Meeting Card -->
+              <table width="100%" cellpadding="0" cellspacing="0"
+                style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;margin-bottom:28px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding-bottom:12px;">
+                          <span style="color:#64748b;font-size:13px;display:block;margin-bottom:2px;">When</span>
+                          <span style="color:#0f172a;font-weight:600;font-size:15px;">
+                            Today · ${meetingTime}
+                          </span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <span style="color:#64748b;font-size:13px;display:block;margin-bottom:2px;">Location</span>
+                          <span style="color:#0f172a;font-weight:600;font-size:15px;">
+                            ${meetingLink ? 'Online Meeting' : 'In-person Meeting'}
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Button -->
+              ${meetingLink ? `
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td align="center">
+                    <a href="${meetingLink}"
+                      style="display:inline-block;background:#2563eb;
+                               color:#ffffff;font-size:15px;font-weight:700;padding:16px 48px;
+                               border-radius:12px;text-decoration:none;
+                               box-shadow:0 10px 15px -3px rgba(37,99,235,0.3);">
+                      Join Meeting Now →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              ` : `
+              <p style="text-align:center;font-size:13px;color:#94a3b8;margin-bottom:24px;">
+                Please head to the meeting location.
+              </p>
+              `}
+
+              <!-- Divider -->
+              <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 24px;"/>
+
+              <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;line-height:1.6;">
+                You are receiving this because you accepted or are pending for this meeting.<br/>
+                Login to <strong>MeetHub</strong> to manage your schedule.
+              </p>
+
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
 // ─── Send functions ───────────────────────────────────────────────────────────
 
 /**
  * Send an organization invitation email to the invitee's inbox.
- * Throws on failure so the caller can handle gracefully.
  */
 export async function sendInvitationEmail(
   payload: InvitationEmailPayload
@@ -233,6 +359,29 @@ Click the link below to accept or decline:
 ${payload.inviteUrl}
 
 If you weren't expecting this, ignore this email.
+    `.trim(),
+  });
+}
+
+/**
+ * Send a meeting reminder email.
+ */
+export async function sendMeetingReminderEmail(
+  payload: MeetingReminderEmailPayload
+): Promise<void> {
+  const mailer = getTransporter();
+
+  await mailer.sendMail({
+    from: `"MeetHub" <${process.env.GMAIL_USER}>`,
+    to: payload.to,
+    subject: `REMINDER: ${payload.meetingTitle} is starting now!`,
+    html: buildReminderEmail(payload),
+    text: `
+Your meeting "${payload.meetingTitle}" with ${payload.organizerName} is starting soon (at ${payload.meetingTime}).
+
+${payload.meetingLink ? `Join here: ${payload.meetingLink}` : 'Please head to the meeting location.'}
+
+Sent by MeetHub.
     `.trim(),
   });
 }

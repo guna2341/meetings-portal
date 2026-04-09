@@ -22,4 +22,10 @@ const UserSchema = new Schema<UserType>(
   { timestamps: true },
 );
 
-export const User = models.User || mongoose.model<UserType>("User", UserSchema);
+export interface IUser extends UserType, mongoose.Document {}
+
+const User: mongoose.Model<IUser> =
+  mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
+
+export { User };
+

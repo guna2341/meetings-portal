@@ -48,6 +48,7 @@ export interface IMeeting extends Document {
   tasks: ITask[];
   notes: INote[];
   organizationId: mongoose.Types.ObjectId;  // Scoped to Organization
+  reminderSent: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -241,6 +242,10 @@ const MeetingSchema = new Schema<IMeeting>(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Organization',
       required: [true, 'Organization ID is required'],
+    },
+    reminderSent: {
+      type: Boolean,
+      default: false,
     },
   },
   {
