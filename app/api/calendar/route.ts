@@ -5,27 +5,22 @@ import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
-function getUserFromRequest(req: NextRequest): { id: string; email: string; name?: string } | null {
-  try {
-    const token = req.cookies.get("token")?.value;
-    if (!token) return null;
-    return jwt.verify(token, JWT_SECRET) as { id: string; email: string; name?: string };
-  } catch {
-    return null;
-  }
-}
+import { requireAuth } from "@/src/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
     await db;
 
-    const user = getUserFromRequest(req);
-    if (!user) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    const user = requireAuth(req);
+    if (user instanceof NextResponse) return user;
+
+    if (!user.currentOrgId) {
+      return NextResponse.json({ success: false, message: "No active organization selected" }, { status: 400 });
     }
 
     // Hosted meetings
     const hostedMeetings = await Meeting.find({
+      organizationId: user.currentOrgId,
       $or: [
         { "organizer.userId": user.id },
         { "organizer.email": user.email }
@@ -34,6 +29,7 @@ export async function GET(req: NextRequest) {
 
     // Invited meetings (Accepted only)
     const invitedMeetings = await Meeting.find({
+      organizationId: user.currentOrgId,
       $or: [
         { "attendees": { $elemMatch: { userId: user.id, status: "accepted" } } },
         { "attendees": { $elemMatch: { email: user.email, status: "accepted" } } }

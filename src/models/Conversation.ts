@@ -5,6 +5,7 @@ export interface IConversation extends Document {
   participants: mongoose.Types.ObjectId[];
   meetingId?: mongoose.Types.ObjectId;
   lastMessage?: mongoose.Types.ObjectId;
+  organizationId: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,6 +31,11 @@ const ConversationSchema = new Schema<IConversation>(
     lastMessage: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Message',
+    },
+    organizationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Organization',
+      required: true,
     },
   },
   {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Clock, Users, Plus, Search, Filter, MoreVertical, MapPin, User, ChevronRight, Building, Loader2, AlertCircle, Link as LinkIcon, Trash2, Bell, CheckCircle, XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useOrg } from '@/src/context/OrgContext';
 
 interface Meeting {
   _id: string;
@@ -48,6 +49,7 @@ export default function DashboardPage() {
   const [deleteConfirmModalId, setDeleteConfirmModalId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const { currentOrg, orgs, loading: orgsLoading } = useOrg();
   const router = useRouter();
 
   useEffect(() => {
@@ -67,8 +69,16 @@ export default function DashboardPage() {
         setLoading(false);
       }
     };
-    fetchDashboard();
-  }, []);
+    if (currentOrg) {
+      fetchDashboard();
+    } else if (!orgsLoading) {
+      setLoading(false);
+      // Guard: if user has orgs but hasn't selected one, go to the picker
+      if (orgs.length > 0) {
+        router.push('/select-org');
+      }
+    }
+  }, [currentOrg?._id, orgsLoading, orgs.length]);
 
   function handleRoute(id: string, route: string) {
     if (route === 'view') {
@@ -307,6 +317,74 @@ export default function DashboardPage() {
           >
             Retry
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── No Organization Empty State ──
+  if (!currentOrg && orgs.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center bg-white p-6 md:p-12 lg:p-16">
+        <div className="max-w-2xl w-full text-center">
+          <div className="relative mb-10 inline-block">
+             <div className="absolute -inset-4 bg-blue-500/10 rounded-full blur-3xl" />
+             <img 
+               src="/empty_organization_illustration_1775640422410.png" 
+               alt="No Organizations" 
+               className="relative w-80 md:w-96 mx-auto animate-in fade-in slide-in-from-bottom-8 duration-1000"
+             />
+          </div>
+          
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight sm:text-5xl">
+              Ready to collaborate?
+            </h1>
+            <p className="text-xl text-gray-500 max-w-lg mx-auto leading-relaxed">
+              Organize your meetings and tasks by creating an organization or joining an existing one.
+            </p>
+          </div>
+
+          <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
+            <button
+              onClick={() => router.push('/organizations/create')}
+              className="w-full sm:w-auto px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all text-lg flex items-center justify-center gap-2"
+            >
+              <Plus className="w-6 h-6" />
+              Create Organization
+            </button>
+            <button
+              onClick={() => router.push('/organizations')}
+              className="w-full sm:w-auto px-8 py-4 bg-white text-gray-700 border-2 border-gray-100 rounded-2xl font-bold hover:border-blue-100 hover:bg-blue-50/50 active:scale-95 transition-all text-lg flex items-center justify-center gap-2"
+            >
+              <Users className="w-6 h-6 text-blue-500" />
+              Join Organization
+            </button>
+          </div>
+          
+          <div className="mt-12 pt-12 border-t border-gray-50 grid grid-cols-1 sm:grid-cols-3 gap-8 animate-in fade-in duration-1000 delay-700">
+             <div className="space-y-1">
+                <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-3">
+                   <Calendar className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-gray-900">Manage Schedule</h3>
+                <p className="text-xs text-gray-400">Shared calendars and invites</p>
+             </div>
+             <div className="space-y-1">
+                <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center mx-auto mb-3">
+                   <Users className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-gray-900">Team Collaboration</h3>
+                <p className="text-xs text-gray-400">Isolated workspaces for every team</p>
+             </div>
+             <div className="space-y-1">
+                <div className="w-10 h-10 bg-green-50 text-green-600 rounded-xl flex items-center justify-center mx-auto mb-3">
+                   <Building className="w-5 h-5" />
+                </div>
+                <h3 className="font-bold text-gray-900">Resource Control</h3>
+                <p className="text-xs text-gray-400">Secure access and role management</p>
+             </div>
+          </div>
         </div>
       </div>
     );

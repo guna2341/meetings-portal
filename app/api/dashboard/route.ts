@@ -2,26 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/src/lib/db";
 import Meeting from "@/src/models/meeting";
 import jwt from "jsonwebtoken";
+import { requireAuth } from "@/src/lib/auth";
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
-function getUserFromRequest(req: NextRequest): { id: string; email: string; name?: string } | null {
-  try {
-    const token = req.cookies.get("token")?.value;
-    if (!token) return null;
-    return jwt.verify(token, JWT_SECRET) as { id: string; email: string; name?: string };
-  } catch {
-    return null;
-  }
-}
+// Dashboard API handler using requireAuth helper
 
 export async function GET(req: NextRequest) {
   try {
     await db;
 
-    const user = getUserFromRequest(req);
-    if (!user) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    const user = requireAuth(req);
+    if (user instanceof NextResponse) return user;
+
+    if (!user.currentOrgId) {
+      return NextResponse.json({ success: false, message: "No active organization selected" }, { status: 400 });
     }
 
     const today = new Date();
@@ -30,6 +25,7 @@ export async function GET(req: NextRequest) {
     tomorrow.setDate(today.getDate() + 1);
 
     const userFilter = {
+      organizationId: user.currentOrgId,
       $or: [
         { "organizer.userId": user.id },
         { "organizer.email": user.email },
@@ -41,12 +37,14 @@ export async function GET(req: NextRequest) {
     // 1. Counts
     const [hostedCount, invitedCount, todayCount] = await Promise.all([
       Meeting.countDocuments({ 
+        organizationId: user.currentOrgId,
         $or: [
           { "organizer.userId": user.id },
           { "organizer.email": user.email }
         ]
       }),
       Meeting.countDocuments({ 
+        organizationId: user.currentOrgId,
         $or: [
           { "attendees.userId": user.id },
           { "attendees.email": user.email }
@@ -62,6 +60,7 @@ export async function GET(req: NextRequest) {
 
     // 3. Hosted Meetings (Upcoming/Recent)
     const hostedMeetings = await Meeting.find({ 
+      organizationId: user.currentOrgId,
       $or: [
         { "organizer.userId": user.id },
         { "organizer.email": user.email }
@@ -73,6 +72,7 @@ export async function GET(req: NextRequest) {
 
     // 4. Invited Meetings (Accepted only)
     const invitedMeetings = await Meeting.find({ 
+      organizationId: user.currentOrgId,
       $or: [
         { "attendees": { $elemMatch: { userId: user.id, status: "accepted" } } },
         { "attendees": { $elemMatch: { email: user.email, status: "accepted" } } }
@@ -84,6 +84,7 @@ export async function GET(req: NextRequest) {
 
     // 5. Pending Invitations
     const pendingInvitations = await Meeting.find({
+      organizationId: user.currentOrgId,
       $or: [
         { "attendees": { $elemMatch: { userId: user.id, status: "pending" } } },
         { "attendees": { $elemMatch: { email: user.email, status: "pending" } } }
@@ -92,9 +93,10 @@ export async function GET(req: NextRequest) {
       .sort({ createdAt: -1 })
       .lean();
 
-    // 6. Today's Meetings (Only if accepted or hosted)
+    // 6. Today's Meetings (Only if accepted or hosted, and filtered by CURRENT org)
     const todayMeetings = await Meeting.find({
       $and: [
+        { organizationId: user.currentOrgId },
         { date: { $gte: today, $lt: tomorrow } },
         {
           $or: [

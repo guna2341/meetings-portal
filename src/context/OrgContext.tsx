@@ -51,11 +51,13 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
         const json = await orgsRes.json();
         const orgList: OrgSummary[] = json.data ?? [];
         setOrgs(orgList);
-
-        // Determine current org from cookie context via a dedicated endpoint or
-        // fallback to first org in list
-        if (orgList.length > 0 && !currentOrg) {
-          setCurrentOrg(orgList[0]);
+        
+        // Restore currentOrg from session if not already set manually
+        if (json.activeOrgId) {
+          const active = orgList.find(o => o._id === json.activeOrgId);
+          if (active) {
+            setCurrentOrg(active);
+          }
         }
       }
 

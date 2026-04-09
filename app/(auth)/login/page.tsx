@@ -34,8 +34,8 @@ export default function LoginPage() {
 
       localStorage.setItem("data", JSON.stringify(data?.data));
 
-      // Redirect to dashboard (or wherever) on success
-      router.push('/dashboard');
+      // Redirect to organization selection on success
+      router.push('/select-org');
     } catch {
       setError('Something went wrong. Please check your connection and try again.');
     } finally {

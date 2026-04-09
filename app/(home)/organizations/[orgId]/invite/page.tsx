@@ -159,7 +159,7 @@ export default function InvitePage() {
                     <p className="text-xs text-amber-700 font-mono mb-1">{result.emailError}</p>
                   )}
                   <p className="text-xs text-amber-700">
-                    Check that GMAIL_USER and GMAIL_APP_PASS are set correctly in your .env file.
+                    The email could not be delivered. Please copy and share the manual invite link below with the invitee.
                   </p>
                 </div>
               )}
@@ -188,11 +188,6 @@ export default function InvitePage() {
           )}
         </div>
 
-        {/* Gmail App Password hint */}
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-500">
-          <p className="font-semibold text-slate-700 mb-1">📌 Gmail Setup (one-time)</p>
-          <p>Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">myaccount.google.com/apppasswords</a> → Generate an App Password → Add it to <code className="font-mono bg-slate-100 px-1 rounded">.env</code> as <code className="font-mono bg-slate-100 px-1 rounded">GMAIL_APP_PASS</code>.</p>
-        </div>
       </div>
     </div>
   );

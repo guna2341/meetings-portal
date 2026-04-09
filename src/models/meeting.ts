@@ -3,7 +3,7 @@ import mongoose, { Document, Model, Schema } from 'mongoose';
 // ─── Sub-document interfaces ───────────────────────────────────────────────
 
 export interface IAttendee {
-  id?: string;
+  userId?: string;
   name: string;
   email: string;
   status: 'accepted' | 'declined' | 'pending';
@@ -47,6 +47,7 @@ export interface IMeeting extends Document {
   agenda: string[];
   tasks: ITask[];
   notes: INote[];
+  organizationId: mongoose.Types.ObjectId;  // Scoped to Organization
   createdAt: Date;
   updatedAt: Date;
 }
@@ -236,6 +237,11 @@ const MeetingSchema = new Schema<IMeeting>(
       type: [NoteSchema],
       default: [],
     },
+    organizationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Organization',
+      required: [true, 'Organization ID is required'],
+    },
   },
   {
     timestamps: true,
@@ -248,6 +254,7 @@ const MeetingSchema = new Schema<IMeeting>(
 
 MeetingSchema.index({ date: 1 });
 MeetingSchema.index({ status: 1 });
+MeetingSchema.index({ organizationId: 1 });              // ← Mandatory scoping index
 MeetingSchema.index({ 'organizer.userId': 1 });          // ← added for GET filter
 MeetingSchema.index({ 'organizer.email': 1 });
 MeetingSchema.index({ 'attendees.email': 1 });

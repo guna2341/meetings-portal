@@ -17,9 +17,18 @@ export async function GET(req: NextRequest, { params }: Params) {
   try {
     await db;
     const { token } = await params;
-    const hashed = hashToken(token);
 
-    const invite = await Invitation.findOne({ token: hashed }).lean();
+    let invite;
+    // Check if 'token' is actually a MongoDB ID
+    if (mongoose.Types.ObjectId.isValid(token)) {
+      invite = await Invitation.findById(token).lean();
+    }
+
+    // Fallback to searching by hashed token
+    if (!invite) {
+      const hashed = hashToken(token);
+      invite = await Invitation.findOne({ token: hashed }).lean();
+    }
 
     if (!invite) {
       return NextResponse.json(
@@ -50,6 +59,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     return NextResponse.json({
       success: true,
       data: {
+        _id: invite._id,
         email: invite.email,
         role: invite.role,
         expiresAt: invite.expiresAt,
@@ -58,10 +68,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     });
   } catch (error) {
     console.error('[GET /api/invitations/[token]]', error);
-    return NextResponse.json(
-      { success: false, message: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -70,7 +77,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     await db;
     const { token } = await params;
 
-    // Must be logged in to accept/decline
     const user = requireAuth(req);
     if (user instanceof NextResponse) return user;
 
@@ -78,39 +84,31 @@ export async function POST(req: NextRequest, { params }: Params) {
     const { action } = body as { action: 'accept' | 'decline' };
 
     if (action !== 'accept' && action !== 'decline') {
-      return NextResponse.json(
-        { success: false, message: 'action must be accept or decline' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, message: 'action must be accept or decline' }, { status: 400 });
     }
 
-    const hashed = hashToken(token);
-    const invite = await Invitation.findOne({ token: hashed });
+    let invite;
+    if (mongoose.Types.ObjectId.isValid(token)) {
+      invite = await Invitation.findById(token);
+    } else {
+      const hashed = hashToken(token);
+      invite = await Invitation.findOne({ token: hashed });
+    }
 
     if (!invite || invite.status !== 'pending') {
-      return NextResponse.json(
-        { success: false, message: 'Invalid or already-used invitation' },
-        { status: 410 }
-      );
+      return NextResponse.json({ success: false, message: 'Invalid or already-used invitation' }, { status: 410 });
     }
 
     if (new Date() > invite.expiresAt) {
       invite.status = 'expired';
       await invite.save();
-      return NextResponse.json(
-        { success: false, message: 'Invitation has expired' },
-        { status: 410 }
-      );
+      return NextResponse.json({ success: false, message: 'Invitation has expired' }, { status: 410 });
     }
 
-    // Validate email matches
     const userDoc = await User.findById(user.id).select('email').lean();
     if (!userDoc || userDoc.email !== invite.email) {
       return NextResponse.json(
-        {
-          success: false,
-          message: 'This invitation was sent to a different email address',
-        },
+        { success: false, message: 'This invitation was sent to a different email address' },
         { status: 403 }
       );
     }
@@ -130,7 +128,6 @@ export async function POST(req: NextRequest, { params }: Params) {
       return NextResponse.json({ success: true, message: 'Invitation declined' });
     }
 
-    // Accept: add membership (idempotent)
     const existing = await Membership.findOne({
       userId: user.id,
       organizationId: invite.organizationId,
@@ -161,9 +158,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       meta: { email: invite.email, role: invite.role },
     });
 
-    const org = await Organization.findById(invite.organizationId)
-      .select('name slug')
-      .lean();
+    const org = await Organization.findById(invite.organizationId).select('name slug').lean();
 
     return NextResponse.json({
       success: true,
@@ -172,9 +167,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     });
   } catch (error) {
     console.error('[POST /api/invitations/[token]]', error);
-    return NextResponse.json(
-      { success: false, message: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: 'Internal server error' }, { status: 500 });
   }
 }

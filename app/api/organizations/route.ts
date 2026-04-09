@@ -56,7 +56,11 @@ export async function GET(req: NextRequest) {
       role: membershipMap.get(o._id.toString()),
     }));
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ 
+      success: true, 
+      data,
+      activeOrgId: user.currentOrgId || null 
+    });
   } catch (error) {
     console.error('[GET /api/organizations]', error);
     return NextResponse.json(

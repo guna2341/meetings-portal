@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createMeeting } from '@/src/services/meetings';
+import { useOrg } from '@/src/context/OrgContext';
 
 // ─── Interfaces ────────────────────────────────────────────────────────────
 
@@ -91,48 +92,73 @@ const defaultForm: MeetingForm = {
 
 // ─── useAllUsers ──────────────────────────────────────────────────────────
 
-function useAllUsers() {
+function useAllUsers(orgId?: string) {
   const [users, setUsers] = useState<ApiUser[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (!orgId) return;
     const run = async () => {
       setLoading(true);
       try {
-        const res = await fetch('/api/users?limit=50');
+        const res = await fetch(`/api/organizations/${orgId}/members`);
         const json = await res.json();
-        if (json.success) setUsers(json.data);
+        if (json.success) {
+          const mapped = json.data.map((m: any) => ({
+            _id: m.userId,
+            name: m.user?.name || 'Unknown',
+            email: m.user?.email || '',
+          }));
+          setUsers(mapped);
+        }
       } catch { /* silently ignore */ }
       finally { setLoading(false); }
     };
     run();
-  }, []);
+  }, [orgId]);
 
   return { users, loading };
 }
 
 // ─── useUsers — debounced ─────────────────────────────────────────────────
 
-function useUsers(search: string) {
+function useUsers(search: string, orgId?: string) {
   const [users, setUsers] = useState<ApiUser[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (!orgId) return;
     let cancelled = false;
     const run = async () => {
       setLoading(true);
       try {
-        const q = new URLSearchParams({ limit: '20' });
-        if (search.trim()) q.set('search', search.trim());
-        const res = await fetch(`/api/users?${q}`);
+        // Since we have a members API, we can fetch all and filter client-side for now
+        // OR if the API supports search, use it. 
+        // For now, let's fetch members and filter.
+        const res = await fetch(`/api/organizations/${orgId}/members`);
         const json = await res.json();
-        if (!cancelled && json.success) setUsers(json.data);
+        if (!cancelled && json.success) {
+          const mapped: ApiUser[] = json.data.map((m: any) => ({
+            _id: m.userId,
+            name: m.user?.name || 'Unknown',
+            email: m.user?.email || '',
+          }));
+          
+          const filtered = search.trim() 
+            ? mapped.filter(u => 
+                u.name.toLowerCase().includes(search.toLowerCase()) || 
+                u.email.toLowerCase().includes(search.toLowerCase())
+              )
+            : mapped;
+
+          setUsers(filtered);
+        }
       } catch { /* silently ignore */ }
       finally { if (!cancelled) setLoading(false); }
     };
     const timer = setTimeout(run, 300);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [search]);
+  }, [search, orgId]);
 
   return { users, loading };
 }
@@ -161,13 +187,13 @@ function OrganizerSelect({
   value,
   onChange,
 }: {
-  value: MeetingForm['organizer'];
+  value: MeetingForm['organizer'] & { orgId?: string };
   onChange: (v: MeetingForm['organizer']) => void;
 }) {
   const [query, setQuery] = useState(value.name);
   const [nameOpen, setNameOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
-  const { users, loading } = useAllUsers();
+  const { users, loading } = useAllUsers(value.orgId);
   const nameRef = useRef<HTMLDivElement>(null);
   const emailRef = useRef<HTMLDivElement>(null);
 
@@ -278,13 +304,15 @@ function OrganizerSelect({
 function UserSearchDropdown({
   onSelect,
   excluded,
+  orgId,
 }: {
   onSelect: (user: ApiUser) => void;
   excluded: string[];
+  orgId?: string;
 }) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
-  const { users, loading } = useUsers(query);
+  const { users, loading } = useUsers(query, orgId);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -305,6 +333,7 @@ function UserSearchDropdown({
           className={`${inputCls} pl-9`}
           placeholder="Search users by name or email…"
           value={query}
+          autoComplete="off"
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
         />
@@ -351,15 +380,17 @@ function UserCombobox({
   displayName,    // the human-readable name to show in the input
   onChange,       // called with (userId, userName) when a user is picked
   onClear,        // called when the field is cleared
+  orgId,
 }: {
   value: string;
   displayName: string;
   onChange: (userId: string, userName: string) => void;
   onClear: () => void;
+  orgId?: string;
 }) {
   const [query, setQuery] = useState(displayName);
   const [open, setOpen] = useState(false);
-  const { users, loading } = useUsers(query);
+  const { users, loading } = useUsers(query, orgId);
   const ref = useRef<HTMLDivElement>(null);
   const isSelected = !!value;
 
@@ -434,6 +465,7 @@ function UserCombobox({
 
 export default function CreateMeetingPage() {
   const router = useRouter();
+  const { currentOrg } = useOrg();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [form, setForm] = useState<MeetingForm>(defaultForm);
@@ -441,6 +473,16 @@ export default function CreateMeetingPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [createdId, setCreatedId] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to top when step changes
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [currentStep]);
 
   const fieldToStep: Record<string, number> = {
     title: 1, description: 1, date: 1, time: 1, duration: 1, location: 1, building: 1, meetingLink: 1, meetingType: 1, status: 1, organizer: 1,
@@ -955,8 +997,9 @@ export default function CreateMeetingPage() {
           >
             <div className="flex flex-col gap-4">
               <UserSearchDropdown
+                orgId={currentOrg?._id}
                 onSelect={addAttendeeFromUser}
-                excluded={form.attendees.map((a) => a.email)}
+                excluded={[...form.attendees.map((a) => a.email), form.organizer.email]}
               />
               {form.attendees.length === 0 ? (
                 <div className="text-center py-6 border border-dashed border-gray-200 rounded-xl">
@@ -1040,11 +1083,12 @@ export default function CreateMeetingPage() {
                             <label className={labelCls}>Assigned To</label>
                             {/* Now stores _id, shows name */}
                             <UserCombobox
-                              value={task.assignedTo}
-                              displayName={task.assignedToName}
-                              onChange={(userId, userName) => updateTaskAssignee(task.id, userId, userName)}
-                              onClear={() => clearTaskAssignee(task.id)}
-                            />
+                            orgId={currentOrg?._id}
+                            value={task.assignedTo}
+                            displayName={task.assignedToName}
+                            onChange={(uid, uname) => updateTaskAssignee(task.id, uid, uname)}
+                            onClear={() => clearTaskAssignee(task.id)}
+                          />
                           </div>
                           <div>
                             <label className={labelCls}>Due Date</label>

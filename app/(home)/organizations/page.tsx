@@ -171,7 +171,7 @@ export default function OrganizationsPage() {
                   </div>
                   <button
                     id={`view-invite-${inv._id}`}
-                    onClick={() => router.push('/invite')}
+                    onClick={() => router.push(`/invite?id=${inv._id}`)}
                     className="flex items-center gap-1 text-sm text-indigo-600 hover:underline font-medium shrink-0"
                   >
                     View <ArrowRight size={14} />

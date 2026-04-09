@@ -44,6 +44,7 @@ export default function OrgDetailPage() {
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'members' | 'invitations'>('members');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -76,6 +77,37 @@ export default function OrgDetailPage() {
       method: 'DELETE',
     });
     if (res.ok) loadData();
+  }
+
+  async function handleDeleteOrg() {
+    if (!org || org.role !== 'owner') return;
+    
+    const confirmation = confirm(
+      `CRITICAL ACTION: Are you absolutely sure you want to delete "${org.name}"?\n\nThis will immediately remove access for ALL members. This action is irreversible via the UI.`
+    );
+    
+    if (!confirmation) return;
+    
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/organizations/${orgId}`, {
+        method: 'DELETE',
+      });
+      
+      if (res.ok) {
+        alert('Organization deleted successfully.');
+        router.push('/organizations');
+        // We might want to refresh the org list in context too
+        window.location.reload(); 
+      } else {
+        const json = await res.json();
+        alert(json.message || 'Failed to delete organization.');
+      }
+    } catch (err) {
+      alert('Network error - please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   if (loading) {
@@ -298,6 +330,31 @@ export default function OrgDetailPage() {
                 </tbody>
               </table>
             )}
+          </div>
+        )}
+        {/* Danger Zone */}
+        {org.role === 'owner' && (
+          <div className="mt-12 mb-8 rounded-2xl border border-rose-200 bg-rose-50 p-6 shadow-sm">
+            <h2 className="text-lg font-bold text-rose-800">Danger Zone</h2>
+            <p className="mt-1 text-sm text-rose-600">
+              Permanently delete this organization and all associated data. This action cannot be undone.
+            </p>
+            <button
+              id="delete-org-full-btn"
+              disabled={isDeleting}
+              onClick={handleDeleteOrg}
+              className="mt-4 flex items-center gap-2 rounded-xl bg-rose-600 px-6 py-3 text-sm font-bold text-white shadow-md transition hover:bg-rose-700 active:scale-95 disabled:opacity-50"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 size={16} /> Delete Organization
+                </>
+              )}
+            </button>
           </div>
         )}
       </div>

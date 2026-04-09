@@ -23,18 +23,39 @@ type PageState =
 function InvitePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const token = searchParams.get('token') ?? '';
 
+  // Robustly extract token at component level
+  const getToken = () => {
+    const t = searchParams.get('token') || searchParams.get('id');
+    if (t) return t;
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('token') || urlParams.get('id');
+    }
+    return null;
+  };
+
+  const token = getToken() || '';
+  
   const [state, setState] = useState<PageState>({ status: 'loading' });
   const [acting, setActing] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      setState({ status: 'invalid', message: 'No invitation token provided.' });
-      return;
+    const activeToken = getToken();
+
+    if (!activeToken) {
+      // If no token, wait briefly for router/searchParams to stabilize (hydration)
+      const timer = setTimeout(() => {
+        const finalToken = getToken();
+        if (!finalToken) {
+          setState({ status: 'invalid', message: 'No invitation token provided.' });
+        }
+      }, 700);
+      return () => clearTimeout(timer);
     }
 
-    fetch(`/api/invitations/${token}`)
+    setState({ status: 'loading' });
+    fetch(`/api/invitations/${activeToken}`)
       .then(async (res) => {
         const json = await res.json();
         if (res.status === 401) {
@@ -46,9 +67,10 @@ function InvitePageContent() {
         }
       })
       .catch(() => setState({ status: 'error', message: 'Failed to load invitation.' }));
-  }, [token]);
+  }, [searchParams]);
 
   async function respond(action: 'accept' | 'decline') {
+    if (!token) return;
     setActing(true);
     try {
       const res = await fetch(`/api/invitations/${token}`, {

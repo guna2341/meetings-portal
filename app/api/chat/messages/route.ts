@@ -2,24 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/src/lib/db";
 import Message from "@/src/models/Message";
 import Conversation from "@/src/models/Conversation";
-import jwt from "jsonwebtoken";
-
 const JWT_SECRET = process.env.JWT_SECRET as string;
+
+import { requireAuth } from "@/src/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
     await db;
 
-    const token = req.cookies.get("token")?.value;
-    if (!token) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
-    }
+    const user = requireAuth(req);
+    if (user instanceof NextResponse) return user;
 
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as { id: string; email: string };
-    } catch {
-      return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
+    if (!user.currentOrgId) {
+      return NextResponse.json({ success: false, message: "No active organization selected" }, { status: 400 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -29,10 +24,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Conversation ID is required" }, { status: 400 });
     }
 
-    // Verify the user is a participant in this conversation
+    // Verify the user is a participant in this conversation AND it's in the current org
     const conversation = await Conversation.findOne({
       _id: conversationId,
-      participants: decoded.id,
+      organizationId: user.currentOrgId,
+      participants: user.id,
     });
 
     if (!conversation) {
@@ -47,8 +43,8 @@ export async function GET(req: NextRequest) {
 
     // Mark messages as read by current user asynchronously
     Message.updateMany(
-      { conversationId, readBy: { $ne: decoded.id } },
-      { $addToSet: { readBy: decoded.id } }
+      { conversationId, readBy: { $ne: user.id } },
+      { $addToSet: { readBy: user.id } }
     ).exec().catch(err => console.error("Failed to mark messages as read", err));
 
     return NextResponse.json({
@@ -65,16 +61,11 @@ export async function POST(req: NextRequest) {
   try {
     await db;
 
-    const token = req.cookies.get("token")?.value;
-    if (!token) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
-    }
+    const user = requireAuth(req);
+    if (user instanceof NextResponse) return user;
 
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET) as { id: string; email: string };
-    } catch {
-      return NextResponse.json({ success: false, message: "Invalid token" }, { status: 401 });
+    if (!user.currentOrgId) {
+      return NextResponse.json({ success: false, message: "No active organization selected" }, { status: 400 });
     }
 
     const { conversationId, content, imageUrl, audioUrl } = await req.json();
@@ -83,10 +74,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Conversation ID and content/image/audio are required" }, { status: 400 });
     }
 
-    // Verify the user is a participant in this conversation
+    // Verify the user is a participant in this conversation AND it's in the current org
     const conversation = await Conversation.findOne({
       _id: conversationId,
-      participants: decoded.id,
+      organizationId: user.currentOrgId,
+      participants: user.id,
     });
 
     if (!conversation) {
@@ -96,11 +88,11 @@ export async function POST(req: NextRequest) {
     // Create the new message
     const message = await Message.create({
       conversationId,
-      senderId: decoded.id,
+      senderId: user.id,
       content: content || "",
       imageUrl: imageUrl || undefined,
       audioUrl: audioUrl || undefined,
-      readBy: [decoded.id],
+      readBy: [user.id],
     });
 
     // Update the conversation's lastMessage and updatedAt

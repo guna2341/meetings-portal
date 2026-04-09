@@ -4,21 +4,9 @@ import Meeting from "@/src/models/meeting";
 import Conversation from "@/src/models/Conversation";
 import { User } from "@/src/models/User";
 import { z } from "zod";
-import jwt from "jsonwebtoken";
+import { requireAuth } from "@/src/lib/auth";
 
-const JWT_SECRET = process.env.JWT_SECRET as string;
-
-// ─── Auth helper ───────────────────────────────────────────────────────────
-
-function getUserFromRequest(req: NextRequest): { id: string; email: string; name?: string } | null {
-  try {
-    const token = req.cookies.get("token")?.value;
-    if (!token) return null;
-    return jwt.verify(token, JWT_SECRET) as { id: string; email: string; name?: string };
-  } catch {
-    return null;
-  }
-}
+// Remove duplicate local helper — use requireAuth from src/lib/auth
 
 // ─── Zod validation schema ─────────────────────────────────────────────────
 
@@ -84,12 +72,14 @@ export async function POST(req: NextRequest) {
   try {
     await db;
 
-    // ── Require auth ──────────────────────────────────────────────────────
-    const user = getUserFromRequest(req);
-    if (!user) {
+    // ── Require auth ──
+    const user = requireAuth(req);
+    if (user instanceof NextResponse) return user;
+
+    if (!user.currentOrgId) {
       return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
+        { success: false, message: "No active organization selected" },
+        { status: 400 }
       );
     }
 
@@ -110,6 +100,7 @@ export async function POST(req: NextRequest) {
     const data = parsed.data;
     const meeting = await Meeting.create({
       ...data,
+      organizationId: user.currentOrgId,
       date: new Date(data.date),
       meetingLink: data.meetingLink || undefined,
 
@@ -137,17 +128,19 @@ export async function POST(req: NextRequest) {
       })),
     });
 
-    // ── Create Automatic Group Chat ──────────────────────────────────────
+    // ── Create Automatic Group Chat ──
     try {
       // Find all attendee user IDs (only for those already registered)
       const attendeeEmails = data.attendees.map(a => a.email);
-      const attendeeUsers = await User.find({ email: { $in: attendeeEmails } }, '_id');
+      // Use any to bypass weird lint on filter
+      const attendeeUsers = await User.find({ email: { $in: attendeeEmails } } as any, '_id');
       const attendeeIds = attendeeUsers.map(u => u._id);
 
       // Create the group conversation
       await Conversation.create({
         type: 'group',
         meetingId: meeting._id,
+        organizationId: user.currentOrgId,
         participants: [user.id, ...attendeeIds],
       });
     } catch (chatError) {
@@ -186,11 +179,13 @@ export async function GET(req: NextRequest) {
   try {
     await db;
 
-    const user = getUserFromRequest(req);
-    if (!user) {
+    const user = requireAuth(req);
+    if (user instanceof NextResponse) return user;
+
+    if (!user.currentOrgId) {
       return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
+        { success: false, message: "No active organization selected" },
+        { status: 400 }
       );
     }
 
@@ -204,6 +199,7 @@ export async function GET(req: NextRequest) {
     const skip     = (page - 1) * limit;
 
     const filter: Record<string, unknown> = {
+      organizationId: user.currentOrgId,
       $or: [
         { "organizer.userId": user.id },    // created by me (ID match)
         { "organizer.email":  user.email }, // created by me (email fallback)

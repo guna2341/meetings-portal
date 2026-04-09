@@ -72,7 +72,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
     user = data ? JSON.parse(data) : null;
   }
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
+    <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Left Section - Menu Button & Logo */}
@@ -195,10 +195,10 @@ export default function Header({ sidebarOpen, setSidebarOpen }: HeaderProps) {
               {showUserMenu && (
                 <>
                   <div
-                    className="fixed inset-0 z-10"
+                    className="fixed inset-0 z-30"
                     onClick={() => setShowUserMenu(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 z-20">
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 z-50">
                     {/* User Info */}
                     <div className="p-4 border-b border-gray-200">
                       <div className="flex items-center gap-3">
