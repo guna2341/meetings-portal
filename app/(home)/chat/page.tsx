@@ -542,9 +542,6 @@ export default function ChatPage() {
                     <h2 className="text-2xl font-black text-gray-900 truncate">
                       {activeChat.type === 'group' ? activeChat.meetingId?.title : (getOtherParticipant(activeChat)?.name || (currentUser?.name && `${currentUser.name} (yourself)`) || 'Chat')}
                     </h2>
-                    <p className="text-xs font-semibold text-gray-400 mt-1">
-                      {activeChat.type === 'group' ? '23 members, 10 online' : 'Typically replies in 5m'}
-                    </p>
                   </div>
                 </div>
                 
